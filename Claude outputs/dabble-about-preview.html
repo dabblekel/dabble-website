@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dabble — About</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root{--ink:#14140f;--soft:#3b3830;--mute:#6b6555;--faint:#a0957f;--paper:#f3efe7}
+  body{background:var(--paper);color:var(--ink);
+      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;-webkit-font-smoothing:antialiased}
+
+  .scene{position:relative;width:100%;min-height:100vh;overflow:hidden}
+  .scene canvas.ascii{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+  .scene svg.art{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible}
+  .scene .copy{position:absolute;z-index:3;max-width:56ch;line-height:1.9;
+      font-size:clamp(13px,1.15vw,15px);color:var(--soft);letter-spacing:.01em;
+      margin:-16px -20px}
+  .scene .copy .box{padding:16px 20px;border-radius:3px;
+      background:rgba(243,239,231,0.60);
+      -webkit-backdrop-filter:blur(2.5px);backdrop-filter:blur(2.5px)}
+  .scene .copy .box + .box{margin-top:2em}
+  .scene .copy p{margin:0 0 1.15em}
+  .scene .copy p:last-child{margin-bottom:0}
+  .scene .copy .lead{color:var(--ink)}
+  .scene .copy em{font-style:normal;color:var(--ink);font-weight:500}
+  .scene .copy a{color:var(--ink);text-decoration:none;border-bottom:1px solid rgba(20,20,15,0.35)}
+  .scene .copy a:hover{border-bottom-color:var(--ink)}
+
+  /* draggable objects carry pointer events; the rest of the art does not.
+     pointer-events is inherited, so setting it on the svg root (none) and the .grab
+     group (auto) lets the group's child shapes inherit auto and become hit targets. */
+  svg.art{pointer-events:none}
+  svg.art .grab{pointer-events:auto;cursor:grab}
+  svg.art .grab.dragging{cursor:grabbing}
+
+  .hint{position:absolute;z-index:3;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+      color:var(--faint);opacity:0;transition:opacity .6s ease}
+  .hint.on{opacity:1}
+  .movehint{position:absolute;z-index:5;font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+      color:var(--mute);pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .5s ease;
+      transform:translateY(-50%)}
+  .movehint.on{opacity:.8}
+
+  /* copy placement per scene */
+  #s1 .copy{left:clamp(22px,6vw,80px);top:clamp(90px,15vh,150px)}
+  #s1 .hint{left:clamp(22px,6vw,80px);bottom:clamp(28px,6vh,60px)}
+  #s2 .copy{left:clamp(22px,6vw,80px);top:clamp(70px,12vh,120px)}
+  #s3 .copy{left:clamp(22px,6vw,80px);top:clamp(70px,12vh,120px)}
+
+  @media(max-width:680px){
+    .scene .copy{max-width:80vw}
+  }
+
+  /* brand marks — bottom corners, fixed across all scenes (not yet linked) */
+  .brand-logo{position:fixed;left:clamp(18px,3vw,40px);bottom:clamp(16px,3vh,34px);z-index:1000;
+      width:clamp(96px,10.5vw,148px);line-height:0}
+  .brand-logo img{display:block;width:100%;height:auto}
+  .brand-info{position:fixed;right:clamp(20px,2.4vw,34px);bottom:clamp(18px,2.4vh,30px);z-index:1000;
+      width:clamp(26px,2.6vw,36px);line-height:0}
+  .brand-info img{display:block;width:100%;height:auto}
+</style>
+</head>
+<body>
+<main>
+  <section class="scene" id="s1">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art1"></svg>
+    <div class="copy">
+      <div class="box">
+        <p class="lead">The best path to roll a boulder depends on the terrain.</p>
+        <p class="lead">The best route to sail a ship depends on the wind.</p>
+      </div>
+      <div class="box">
+        <p>Without reading the terrain or the wind, you risk pushing harder up the wrong hill, or rowing blind.</p>
+      </div>
+    </div>
+    <div class="movehint" id="mh-rock">move me!</div>
+    <div class="movehint" id="mh-boat">move me!</div>
+  </section>
+
+  <section class="scene" id="s2">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art2"></svg>
+    <div class="copy">
+      <div class="box">
+        <p>At Dabble, we read the grain of the systems that surround a problem and use the conditions
+           most advantageous — technically, financially, and culturally — to unlock it.</p>
+      </div>
+      <div class="box">
+        <p>This leads us to build:</p>
+        <p><em>Products</em> that roll downhill on their own, gaining momentum instead of requiring force.</p>
+        <p><em>Companies</em> that sell into markets already leaning toward the winds, rather than markets we have to convince.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="s3">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art3"></svg>
+    <div class="copy">
+      <div class="box">
+        <p class="lead">We build a portfolio of our own companies in-house, and help visionaries do the same with theirs.</p>
+      </div>
+      <div class="box">
+        <p>Interested in Dabbling with us?</p>
+        <p>Let us know<br>--&gt; <a href="mailto:hello@dabble.team">hello@dabble.team</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const SVGNS="http://www.w3.org/2000/svg";
+const INK="#14140f", SOFT="#3b3830", MUTE="#6b6555", FAINT="#b5ac9b";
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeOut=t=>1-Math.pow(1-t,3);
+const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeRoll=t=>{ if(t<0.86){const u=t/0.86;return Math.pow(u,2.2)*0.9;} const u=(t-0.86)/0.14; return 0.9+(1-(1-u)*(1-u))*0.1; };
+const now=()=>performance.now();
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+/* smooth path through points (Catmull-Rom -> cubic bezier) */
+function smoothPath(pts){
+  if(pts.length<2) return "";
+  let d="M"+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+="C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+p2[0].toFixed(1)+" "+p2[1].toFixed(1);
+  }
+  return d;
+}
+
+/* ---------- boat + rock builders ---------- */
+function makeBoat(scale){
+  const g=el("g",{class:"boat"});
+  const s=scale;
+  const hull=el("path",{d:`M ${-30*s} ${6*s} Q ${-34*s} ${16*s} ${-22*s} ${18*s} L ${22*s} ${18*s} Q ${34*s} ${16*s} ${30*s} ${6*s} Z`,
+      fill:"var(--paper)",stroke:INK,"stroke-width":2.4});
+  const mast=el("line",{x1:0,y1:6*s,x2:0,y2:-34*s,stroke:INK,"stroke-width":2.4});
+  const main=el("path",{d:`M ${3*s} ${-32*s} L ${3*s} ${2*s} L ${26*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  const jib=el("path",{d:`M ${-3*s} ${-24*s} L ${-3*s} ${2*s} L ${-20*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  g.append(hull,jib,main,mast);
+  return g;
+}
+function makeRock(r){
+  const g=el("g",{class:"rock"});
+  const c=el("circle",{cx:0,cy:0,r:r,fill:SOFT});
+  g.append(c);
+  return g;
+}
+function setXY(g,x,y,rot,extra){
+  g.setAttribute("transform",`translate(${x.toFixed(1)} ${y.toFixed(1)})`+(rot?` rotate(${rot.toFixed(1)})`:"")+(extra||""));
+}
+
+/* ============================================================= SCENE 1 */
+function Scene1(){
+  const sec=document.getElementById("s1");
+  const svg=document.getElementById("art1");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  const mhRock=document.getElementById("mh-rock"), mhBoat=document.getElementById("mh-boat");
+  let mhRockGone=false, mhBoatGone=false;
+  // valley on the left (uphill both sides), then a shore down into the sea on the right
+  const CP=[[-0.05,0.125],[0.14,0.15],[0.35,0.35],[0.55,0.605],[0.72,0.44],[0.88,0.275],[1.06,0.30]];
+  const G=0.85, FR=0.955;
+  let W,H,waterY,terrain,shoreX,floorX,groundEndX,startX,boatHome,entered=false,lastT=0;
+  let boat,rock,waterline,terrainPath,crests=[];
+  let rockX=0,rockVX=0,rockPos={x:0,y:0,rot:0},rockState="idle",rockSunk=false,fallAnim=null,rockDrag=null;
+  let boatPos={x:0,y:0},boatAnim=null,boatFallAnim=null,boatDrag=null,boatMode="water";
+
+  function buildTerrain(){
+    const P=CP.map(function(c){return [c[0]*W,c[1]*H];});
+    const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=26;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    return s;
+  }
+  function surfY(x){
+    const s=terrain;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+2)-surfY(x-2))/4; }
+  function findFloorX(){ let bx=W*0.5,by=-1; for(let x=W*0.28;x<W*0.74;x+=2){const y=surfY(x); if(y<waterY && y>by){by=y;bx=x;}} return bx; }
+  function findShoreX(){ for(let x=floorX;x<W;x+=2){ if(surfY(x)>=waterY) return x; } return W; }
+
+  function build(){
+    W=sec.clientWidth;H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    waterY=H*0.66;
+    terrain=buildTerrain(); floorX=findFloorX(); shoreX=0; groundEndX=findShoreX(); startX=W*0.40;
+    let d="";
+    for(let i=0;i<terrain.length;i++){ const P=terrain[i]; d+=(i?"L":"M")+P[0].toFixed(1)+" "+P[1].toFixed(1); }
+    terrainPath=el("path",{d:d,fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"}); svg.append(terrainPath);
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"}); svg.append(waterline);
+    crests=[];
+    for(let i=0;i<6;i++){ const cx=lerp(W*0.08,W*0.92,i/5); const cr=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.2,"stroke-linecap":"round",opacity:.55}); cr._x=cx; cr._ph=Math.random()*6.28; crests.push(cr); svg.append(cr); }
+    boatHome={x:W*0.85,y:waterY+10};
+    rock=makeRock(18); rock.classList.add("grab"); svg.append(rock);
+    boat=makeBoat(1.0); boat.classList.add("grab"); svg.append(boat);
+    rockX=entered?floorX:startX; rockVX=0; rockState="idle"; rockSunk=false; fallAnim=null;
+    rockPos={x:rockX,y:surfY(rockX)-18,rot:0};
+    boatPos={x:boatHome.x,y:boatHome.y}; boatMode="water"; boatAnim=null; boatFallAnim=null; lastT=0;
+    attachDrag();
+  }
+
+  function drawWater(t){
+    ctx.clearRect(0,0,W,H);
+    const chW=9,chH=13,rows=Math.ceil((H-waterY)/chH)+1;
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let r=0;r<rows;r++){ const y=waterY+r*chH, depth=r/rows, alpha=(1-depth)*0.42; if(alpha<=0.02)continue;
+      for(let x=shoreX;x<W;x+=chW){ const p=Math.sin(x*0.021+t*0.0022+r*0.55)+0.6*Math.cos(x*0.011-t*0.0014+r*0.3);
+        let ch; if(p>0.95)ch="≈"; else if(p>0.12)ch="~"; else continue;
+        ctx.fillStyle="rgba(59,56,48,"+(alpha*(ch==="≈"?1:0.85)).toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function layoutWaterline(t){
+    let d="M"+shoreX.toFixed(1)+" "+waterY.toFixed(1);
+    for(let x=shoreX;x<=W;x+=W/40){ const y=waterY+Math.sin(x*0.03+t*0.0016)*3.2+Math.sin(x*0.013-t*0.0011)*2.0; d+="L"+x.toFixed(1)+" "+y.toFixed(1); }
+    waterline.setAttribute("d",d);
+    crests.forEach(function(cr){ const bob=Math.sin(t*0.002+cr._ph)*3, x=cr._x, y=waterY-10+bob; cr.setAttribute("d","M"+(x-14).toFixed(1)+" "+y.toFixed(1)+" q7 -6 14 0 q7 6 14 0"); });
+  }
+  function splashAt(x,y){
+    const g=el("g",{}); g.setAttribute("transform","translate("+x.toFixed(1)+" "+y.toFixed(1)+")");
+    for(let i=0;i<7;i++){ const a=-Math.PI*(0.12+0.76*(i/6));
+      const drop=el("line",{x1:0,y1:0,x2:0,y2:-7,stroke:SOFT,"stroke-width":1.6,"stroke-linecap":"round"}); g.append(drop);
+      const r=24+Math.random()*20,dx=Math.cos(a)*r,dy=Math.sin(a)*r;
+      drop.animate([{transform:"translate(0px,0px)",opacity:1},{transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)",opacity:0}],{duration:520+Math.random()*180,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}); }
+    const ring=el("path",{d:"M-18 0 q18 -12 36 0",fill:"none",stroke:SOFT,"stroke-width":1.4}); g.append(ring);
+    ring.animate([{opacity:.9,transform:"scale(0.4)"},{opacity:0,transform:"scale(1.35)"}],{duration:520,easing:"ease-out",fill:"forwards"});
+    svg.append(g); setTimeout(function(){ if(g.parentNode)g.parentNode.removeChild(g); },1000);
+  }
+
+  function physicsStep(dt){
+    const sl=slopeAt(rockX);
+    rockVX += G*sl*dt;
+    rockVX *= Math.pow(FR,dt);
+    rockX += rockVX*dt;
+    if(rockX<8){rockX=8;rockVX=Math.abs(rockVX)*0.3;}
+    if(rockX>W-8){rockX=W-8;rockVX=-Math.abs(rockVX)*0.3;}
+    const sy=surfY(rockX);
+    if(rockX>=groundEndX || sy>waterY){ sinkFrom(rockX,sy); return; }
+    rockPos.x=rockX; rockPos.y=sy-18; rockPos.rot += rockVX*dt*1.1;
+    if(Math.abs(rockVX)<0.05 && Math.abs(sl)<0.02){ rockVX=0; rockState="idle"; }
+  }
+  function sinkFrom(x,fromY){
+    rockState="sink"; rockSunk=true;
+    const startY=fromY, fallDur=(fromY<waterY)?Math.max(240,(waterY-fromY)*1.3):0;
+    const t0=now(), sinkStart=t0+fallDur, sinkDur=1500; let splashed=false;
+    fallAnim=function(t){
+      if(t<sinkStart){ const k=clamp((t-t0)/Math.max(1,fallDur),0,1); rockPos.x=x; rockPos.y=lerp(startY,waterY,k*k); rockPos.rot+=4; }
+      else { if(!splashed){splashed=true;splashAt(x,waterY);} const k=clamp((t-sinkStart)/sinkDur,0,1); rockPos.x=x+Math.sin(t*0.006)*3*(1-k); rockPos.y=lerp(waterY,H+30,easeInOut(k)); rockPos.rot+=5; if(k>=1)fallAnim=null; }
+    };
+  }
+  function boatFall(x,fromY,toY,mode,splash){
+    boatMode="fall"; boatFallAnim=null;
+    if(fromY>=toY-2){ boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; return; }
+    const t0=now(), dur=Math.max(180,(toY-fromY)*0.85);
+    boatFallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=x; boatPos.y=lerp(fromY,toY,k*k);
+      if(k>=1){ boatFallAnim=null; boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; } };
+  }
+  function landThenRoll(x,fromY){
+    const surf=surfY(x)-18;
+    if(fromY>=surf-2){ rockX=x; rockVX=0; rockState="roll"; return; }
+    rockState="fall";
+    const t0=now(), dur=Math.max(160,(surf-fromY)*1.05);
+    fallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); rockPos.x=x; rockPos.y=lerp(fromY,surf,k*k); if(k>=1){ fallAnim=null; rockX=x; rockVX=0; rockState="roll"; } };
+  }
+
+  function enter(){
+    if(entered)return; entered=true;
+    rockX=startX; rockVX=0; rockPos.x=rockX; rockPos.y=surfY(rockX)-18; rockState="roll";
+    const bx0=W+80,t0=now(),dur=1700; boatPos.x=bx0;
+    boatAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=lerp(bx0,boatHome.x,easeOut(k)); if(k>=1)boatAnim=null; };
+    setTimeout(function(){ if(!mhRockGone&&mhRock)mhRock.classList.add("on"); if(!mhBoatGone&&mhBoat)mhBoat.classList.add("on"); },1200);
+  }
+
+  function attachDrag(){
+    function pt(ev){const r=sec.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    rock.addEventListener("pointerdown",function(ev){ if(rockSunk)return; ev.preventDefault(); mhRockGone=true; if(mhRock)mhRock.classList.remove("on"); rock.classList.add("dragging"); rock.setPointerCapture(ev.pointerId); rockState="idle"; rockVX=0; fallAnim=null; const p=pt(ev); rockDrag={dx:rockPos.x-p.x,dy:rockPos.y-p.y}; });
+    rock.addEventListener("pointermove",function(ev){ if(!rockDrag)return; const p=pt(ev); rockPos.x=p.x+rockDrag.dx; rockPos.y=p.y+rockDrag.dy; rockPos.rot=0; });
+    function rockUp(ev){ if(!rockDrag)return; rockDrag=null; rock.classList.remove("dragging"); try{rock.releasePointerCapture(ev.pointerId)}catch(e){} const x=clamp(rockPos.x,0,W); if(x>=groundEndX || rockPos.y>waterY || rockPos.y>surfY(x)+10){ sinkFrom(x,rockPos.y); } else { landThenRoll(x,rockPos.y); } }
+    rock.addEventListener("pointerup",rockUp); rock.addEventListener("pointercancel",rockUp);
+    boat.addEventListener("pointerdown",function(ev){ ev.preventDefault(); mhBoatGone=true; if(mhBoat)mhBoat.classList.remove("on"); boat.classList.add("dragging"); boat.setPointerCapture(ev.pointerId); boatAnim=null; boatFallAnim=null; boatMode="drag"; const p=pt(ev); boatDrag={dx:boatPos.x-p.x,dy:boatPos.y-p.y}; });
+    boat.addEventListener("pointermove",function(ev){ if(!boatDrag)return; const p=pt(ev); boatPos.x=p.x+boatDrag.dx; boatPos.y=p.y+boatDrag.dy; });
+    function boatUp(ev){ if(!boatDrag)return; boatDrag=null; boat.classList.remove("dragging"); try{boat.releasePointerCapture(ev.pointerId)}catch(e){}
+      const x=clamp(boatPos.x,0,W), surf=surfY(x);
+      if(x < groundEndX && boatPos.y < surf){ boatFall(x,boatPos.y, surf-16, "land", false); }          // above the hill line -> land on the hill
+      else if(boatPos.y < waterY){ boatFall(x,boatPos.y, waterY+10, "water", true); } // below the hill line, above the water -> plop + splash
+      else { boatMode="water"; }                                                       // in the water -> stays where dropped, rocks
+    }
+    boat.addEventListener("pointerup",boatUp); boat.addEventListener("pointercancel",boatUp);
+  }
+
+  function layoutObjects(t){
+    let bx=boatPos.x,by=boatPos.y,brot=0;
+    if(boatMode==="water"){ by=boatPos.y+Math.sin(t*0.0026+bx*0.01)*4; brot=Math.sin(t*0.0026+bx*0.01+0.6)*4; }
+    setXY(boat,bx,by,brot);
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+    if(mhRock){ mhRock.style.left=(rockPos.x+24).toFixed(0)+"px"; mhRock.style.top=(rockPos.y-30).toFixed(0)+"px"; }
+    if(mhBoat){ mhBoat.style.left=(bx+34).toFixed(0)+"px"; mhBoat.style.top=(by-36).toFixed(0)+"px"; }
+  }
+  function tick(t){
+    const dt = lastT? clamp((t-lastT)/16.667,0.4,2.4):1; lastT=t;
+    drawWater(t); layoutWaterline(t);
+    if(rockState==="roll") physicsStep(dt);
+    if(fallAnim) fallAnim(t);
+    if(boatFallAnim) boatFallAnim(t);
+    if(boatAnim) boatAnim(t);
+    layoutObjects(t);
+  }
+  return {build,enter,tick,sec};
+}
+
+/* ============================================================= SCENE 2 */
+function Scene2(){
+  const sec=document.getElementById("s2");
+  const svg=document.getElementById("art2");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  // hill on the LEFT descending to the water; open water full width to the right
+  const CP=[[-0.05,0.23],[0.10,0.25],[0.22,0.33],[0.33,0.50],[0.41,0.595],[0.48,0.625],[0.70,0.625],[0.82,0.66],[1.06,0.70]];
+  const G=0.85, FR=0.955, DRIFT=0.35;
+  let W,H,waterY,terrain,restX,groundEndX,entered=false,lastT=0;
+  let boat,rock,waterline,terrainPath,crests=[],curls=[];
+  let rockX=0,rockVX=0,rockPos={x:0,y:0,rot:0},rockState="idle",rockSunk=false,fallAnim=null,rockDrag=null;
+  let boatPos={x:0,y:0},boatFallAnim=null,boatDrag=null,boatMode="water";
+
+  function buildTerrain(){
+    const P=CP.map(function(c){return [c[0]*W,c[1]*H];});
+    const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=26;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    return s;
+  }
+  function surfY(x){
+    const s=terrain;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+2)-surfY(x-2))/4; }
+
+  function build(){
+    W=sec.clientWidth;H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    waterY=H*0.63; terrain=buildTerrain(); restX=W*0.56;
+    // hill line: draw until it nears the water, then let the waterline take over
+    let d="";groundEndX=W;
+    for(let i=0;i<terrain.length;i++){ const P=terrain[i]; d+=(i?"L":"M")+P[0].toFixed(1)+" "+P[1].toFixed(1); if(P[1]>=waterY-2){ groundEndX=P[0]; break; } }
+    terrainPath=el("path",{d:d,fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"}); svg.append(terrainPath);
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"}); svg.append(waterline);
+    crests=[]; for(let i=0;i<6;i++){ const cx=lerp(W*0.08,W*0.92,i/5); const cr=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.2,"stroke-linecap":"round",opacity:.5}); cr._x=cx; cr._ph=Math.random()*6.28; crests.push(cr); svg.append(cr); }
+    // wind curls, centre-upper over the water
+    curls=[]; const spots=[[W*0.46,H*0.20],[W*0.56,H*0.15],[W*0.53,H*0.33],[W*0.64,H*0.27]];
+    spots.forEach(function(sp){ const c=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.3,"stroke-linecap":"round",opacity:.6}); c._x=sp[0];c._y=sp[1];c._sc=0.8+Math.random()*0.5;c._ph=Math.random()*6.28; curls.push(c); svg.append(c); });
+    rock=makeRock(18); rock.classList.add("grab"); svg.append(rock);
+    boat=makeBoat(1.1); boat.classList.add("grab"); svg.append(boat);
+    // boulder rests at the foot of the hill (no entrance animation); boat drifts in from the left
+    rockX=restX; rockVX=0; rockState="idle"; rockSunk=false; fallAnim=null;
+    rockPos={x:rockX,y:surfY(rockX)-18,rot:0};
+    boatPos={x:-50,y:waterY+10}; boatMode="water"; boatFallAnim=null; lastT=0;
+    attachDrag();
+  }
+
+  function drawWater(t){
+    ctx.clearRect(0,0,W,H);
+    const chW=9,chH=13,rows=Math.ceil((H-waterY)/chH)+1;
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let r=0;r<rows;r++){ const y=waterY+r*chH, depth=r/rows, alpha=(1-depth)*0.42; if(alpha<=0.02)continue;
+      for(let x=0;x<W;x+=chW){ const p=Math.sin(x*0.021+t*0.0022+r*0.55)+0.6*Math.cos(x*0.011-t*0.0014+r*0.3);
+        let ch; if(p>0.95)ch="≈"; else if(p>0.12)ch="~"; else continue;
+        ctx.fillStyle="rgba(59,56,48,"+(alpha*(ch==="≈"?1:0.85)).toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function drawWind(t){
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    const wy0=H*0.13, wy1=H*0.46, x0=W*0.40, x1=W*0.74, chH=15;
+    for(let y=wy0;y<wy1;y+=chH){ const row=(y-wy0)/chH;
+      for(let x=x0;x<x1;x+=9){ const drift=(x - t*0.055*(1+row*0.2)); const p=Math.sin(drift*0.03+row);
+        let ch; if(p>0.9)ch="~"; else if(p>0.6)ch="⌒"; else continue;
+        const a=(1-(y-wy0)/(wy1-wy0))*0.26; ctx.fillStyle="rgba(107,101,85,"+a.toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function layoutWaterline(t){
+    let d="M0 "+waterY.toFixed(1);
+    for(let x=0;x<=W;x+=W/40){ const y=waterY+Math.sin(x*0.03+t*0.0016)*3.2+Math.sin(x*0.013-t*0.0011)*2.0; d+="L"+x.toFixed(1)+" "+y.toFixed(1); }
+    waterline.setAttribute("d",d);
+    crests.forEach(function(cr){ const bob=Math.sin(t*0.002+cr._ph)*3, x=cr._x, y=waterY-10+bob; cr.setAttribute("d","M"+(x-14).toFixed(1)+" "+y.toFixed(1)+" q7 -6 14 0 q7 6 14 0"); });
+    curls.forEach(function(c){ const rot=Math.sin(t*0.0009+c._ph)*10, drift=Math.sin(t*0.0006+c._ph)*12, sc=c._sc;
+      const dd="M "+(-26*sc)+" 0 q "+(16*sc)+" "+(-14*sc)+" "+(30*sc)+" "+(-2*sc)+" q "+(12*sc)+" "+(10*sc)+" "+(2*sc)+" "+(14*sc)+" q "+(-8*sc)+" "+(3*sc)+" "+(-9*sc)+" "+(-6*sc);
+      c.setAttribute("d",dd); c.setAttribute("transform","translate("+(c._x+drift).toFixed(1)+" "+c._y.toFixed(1)+") rotate("+rot.toFixed(1)+")"); });
+  }
+  function splashAt(x,y){
+    const g=el("g",{}); g.setAttribute("transform","translate("+x.toFixed(1)+" "+y.toFixed(1)+")");
+    for(let i=0;i<7;i++){ const a=-Math.PI*(0.12+0.76*(i/6));
+      const drop=el("line",{x1:0,y1:0,x2:0,y2:-7,stroke:SOFT,"stroke-width":1.6,"stroke-linecap":"round"}); g.append(drop);
+      const r=24+Math.random()*20,dx=Math.cos(a)*r,dy=Math.sin(a)*r;
+      drop.animate([{transform:"translate(0px,0px)",opacity:1},{transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)",opacity:0}],{duration:520+Math.random()*180,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}); }
+    const ring=el("path",{d:"M-18 0 q18 -12 36 0",fill:"none",stroke:SOFT,"stroke-width":1.4}); g.append(ring);
+    ring.animate([{opacity:.9,transform:"scale(0.4)"},{opacity:0,transform:"scale(1.35)"}],{duration:520,easing:"ease-out",fill:"forwards"});
+    svg.append(g); setTimeout(function(){ if(g.parentNode)g.parentNode.removeChild(g); },1000);
+  }
+  function physicsStep(dt){
+    const sl=slopeAt(rockX);
+    rockVX += G*sl*dt; rockVX *= Math.pow(FR,dt); rockX += rockVX*dt;
+    if(rockX<8){rockX=8;rockVX=Math.abs(rockVX)*0.3;}
+    const sy=surfY(rockX);
+    if(rockX>=groundEndX || sy>waterY){ sinkFrom(rockX,sy); return; }
+    rockPos.x=rockX; rockPos.y=sy-18; rockPos.rot += rockVX*dt*1.1;
+    if(Math.abs(rockVX)<0.05 && Math.abs(sl)<0.02){ rockVX=0; rockState="idle"; }
+  }
+  function sinkFrom(x,fromY){
+    rockState="sink"; rockSunk=true;
+    const startY=fromY, fallDur=(fromY<waterY)?Math.max(240,(waterY-fromY)*1.3):0;
+    const t0=now(), sinkStart=t0+fallDur, sinkDur=1500; let splashed=false;
+    fallAnim=function(t){
+      if(t<sinkStart){ const k=clamp((t-t0)/Math.max(1,fallDur),0,1); rockPos.x=x; rockPos.y=lerp(startY,waterY,k*k); rockPos.rot+=4; }
+      else { if(!splashed){splashed=true;splashAt(x,waterY);} const k=clamp((t-sinkStart)/sinkDur,0,1); rockPos.x=x+Math.sin(t*0.006)*3*(1-k); rockPos.y=lerp(waterY,H+30,easeInOut(k)); rockPos.rot+=5; if(k>=1)fallAnim=null; }
+    };
+  }
+  function boatFall(x,fromY,toY,mode,splash){
+    boatMode="fall"; boatFallAnim=null;
+    if(fromY>=toY-2){ boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; return; }
+    const t0=now(), dur=Math.max(180,(toY-fromY)*0.85);
+    boatFallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=x; boatPos.y=lerp(fromY,toY,k*k);
+      if(k>=1){ boatFallAnim=null; boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; } };
+  }
+  function landThenRoll(x,fromY){
+    const surf=surfY(x)-18;
+    if(fromY>=surf-2){ rockX=x; rockVX=0; rockState="roll"; return; }
+    rockState="fall";
+    const t0=now(), dur=Math.max(160,(surf-fromY)*1.05);
+    fallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); rockPos.x=x; rockPos.y=lerp(fromY,surf,k*k); if(k>=1){ fallAnim=null; rockX=x; rockVX=0; rockState="roll"; } };
+  }
+
+  function enter(){ entered=true; }
+
+  function attachDrag(){
+    function pt(ev){const r=sec.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    rock.addEventListener("pointerdown",function(ev){ if(rockSunk)return; ev.preventDefault(); rock.classList.add("dragging"); rock.setPointerCapture(ev.pointerId); rockState="idle"; rockVX=0; fallAnim=null; const p=pt(ev); rockDrag={dx:rockPos.x-p.x,dy:rockPos.y-p.y}; });
+    rock.addEventListener("pointermove",function(ev){ if(!rockDrag)return; const p=pt(ev); rockPos.x=p.x+rockDrag.dx; rockPos.y=p.y+rockDrag.dy; rockPos.rot=0; });
+    function rockUp(ev){ if(!rockDrag)return; rockDrag=null; rock.classList.remove("dragging"); try{rock.releasePointerCapture(ev.pointerId)}catch(e){} const x=clamp(rockPos.x,0,W); if(x>=groundEndX || rockPos.y>waterY || rockPos.y>surfY(x)+10){ sinkFrom(x,rockPos.y); } else { landThenRoll(x,rockPos.y); } }
+    rock.addEventListener("pointerup",rockUp); rock.addEventListener("pointercancel",rockUp);
+    boat.addEventListener("pointerdown",function(ev){ ev.preventDefault(); boat.classList.add("dragging"); boat.setPointerCapture(ev.pointerId); boatFallAnim=null; boatMode="drag"; const p=pt(ev); boatDrag={dx:boatPos.x-p.x,dy:boatPos.y-p.y}; });
+    boat.addEventListener("pointermove",function(ev){ if(!boatDrag)return; const p=pt(ev); boatPos.x=p.x+boatDrag.dx; boatPos.y=p.y+boatDrag.dy; });
+    function boatUp(ev){ if(!boatDrag)return; boatDrag=null; boat.classList.remove("dragging"); try{boat.releasePointerCapture(ev.pointerId)}catch(e){}
+      const x=clamp(boatPos.x,0,W), surf=surfY(x);
+      if(x < groundEndX && boatPos.y < surf){ boatFall(x,boatPos.y, surf-16, "land", false); }
+      else if(boatPos.y < waterY){ boatFall(x,boatPos.y, waterY+10, "water", true); }
+      else { boatMode="water"; } }
+    boat.addEventListener("pointerup",boatUp); boat.addEventListener("pointercancel",boatUp);
+  }
+
+  function layoutObjects(t){
+    let bx=boatPos.x,by=boatPos.y,brot=0;
+    if(boatMode==="water"){ by=boatPos.y+Math.sin(t*0.0026+bx*0.01)*4; brot=Math.sin(t*0.0026+bx*0.01+0.6)*4; }
+    setXY(boat,bx,by,brot);
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+  }
+  function tick(t){
+    const dt = lastT? clamp((t-lastT)/16.667,0.4,2.4):1; lastT=t;
+    drawWater(t); drawWind(t); layoutWaterline(t);
+    if(rockState==="roll") physicsStep(dt);
+    if(fallAnim) fallAnim(t);
+    if(boatFallAnim) boatFallAnim(t);
+    if(boatMode==="water" && !boatDrag){ boatPos.x += DRIFT*dt; if(boatPos.x>W+50) boatPos.x=-50; }
+    layoutObjects(t);
+  }
+  return {build,enter,tick,sec};
+}
+
+/* ============================================================= SCENE 3 */
+function Scene3(){
+  const sec=document.getElementById("s3");
+  const svg=document.getElementById("art3");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  let W,H,groundY,entered=false,lastT=0;
+  let groundPath;
+  let cps=[];          // draggable ground control points {x,y}
+  let terrain=[];      // dense samples [[x,y]]
+  const R=20;          // boulder radius
+  const ROWH=R*1.732;  // nested-row height
+  let bodies=[];
+  let timers=[];
+  let drag=null;
+  const G=0.5;
+  const easeIn=k=>k*k;
+
+  /* ---- ground ---- */
+  function buildCPs(){
+    cps=[];
+    const n=20;
+    for(let i=0;i<=n;i++){ cps.push({x:W*i/n, y:groundY}); }   // perfectly flat to start
+  }
+  function buildTerrain(){
+    const P=cps.map(c=>[c.x,c.y]); const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=16;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    terrain=s;
+  }
+  function surfY(x){
+    const s=terrain; if(!s.length)return groundY;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+3)-surfY(x-3))/6; }
+
+  /* ---- bodies ---- */
+  function addRock(x,y){
+    const g=el("g",{class:"grab"});
+    const c=el("circle",{cx:0,cy:0,r:R,fill:SOFT});
+    const mark=el("path",{d:`M ${(-R*0.55).toFixed(1)} 0 A ${(R*0.55).toFixed(1)} ${(R*0.55).toFixed(1)} 0 0 1 ${(R*0.55).toFixed(1)} 0`,fill:"none",stroke:"rgba(20,20,15,0.16)","stroke-width":1.4,"stroke-linecap":"round"});
+    g.append(c,mark); svg.append(g);
+    const b={kind:"rock",x,y,vx:0,vy:0,rot:0,vrot:0,r:R,mass:1,node:g,
+             held:false,sleeping:false,supported:false,place:null,still:0,wakeUntil:0,
+             restG:0.14,restB:0.14,fr:0.999};
+    bodies.push(b); return b;
+  }
+  function addBoat(x,y){
+    const g=makeBoat(0.85); g.classList.add("grab"); svg.append(g);
+    const b={kind:"boat",x,y,vx:0,vy:0,rot:0,vrot:0,r:20,mass:0.8,node:g,
+             held:false,sleeping:false,supported:false,place:null,still:0,wakeUntil:0,
+             restG:0.24,restB:0.08,fr:0.72};
+    bodies.push(b); return b;
+  }
+  function wake(b,grace){ if(!b.place){ b.sleeping=false; b.still=0; b.wakeUntil=now()+(grace||650); } }
+
+  /* ---- physics ---- */
+  function groundCollide(b){
+    const gy=surfY(b.x);
+    const pen=(b.y+b.r)-gy;
+    if(pen<=0)return;
+    const sl=slopeAt(b.x), nl=Math.hypot(sl,1);
+    const nx=sl/nl, ny=-1/nl;
+    b.y-=pen; b.supported=true;
+    let vn=b.vx*nx+b.vy*ny;
+    const tx=-ny, ty=nx; let vt=b.vx*tx+b.vy*ty;
+    vn = vn<0 ? -vn*b.restG : 0;
+    vt*=b.fr;                                   // kinetic friction (light while fast, so it can roll in)
+    // rolling resistance that ramps up as it slows -> a smooth, gradual stop (no hard snap)
+    const av=Math.abs(vt);
+    if(av<2.2){ const dec=(1-av/2.2)*0.025; vt = av<=dec ? 0 : vt-Math.sign(vt)*dec; }
+    b.vx=vn*nx+vt*tx; b.vy=vn*ny+vt*ty;
+    b.vrot=-vt/b.r*57.3*0.5;
+  }
+  function collidePair(a,b){
+    if(a.place||b.place)return;
+    if(a.sleeping && b.sleeping) return;
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=a.r+b.r;
+    if(d>=min)return;
+    if(d<0.001){ dx=(Math.random()-0.5); dy=-1; d=Math.hypot(dx,dy); }
+    const nx=dx/d, ny=dy/d, overlap=min-d;
+    // a frozen (sleeping) body is an immovable wall: only the mover reacts, so the triangle stays perfect
+    if(a.sleeping || b.sleeping){
+      const mover=a.sleeping?b:a, wall=a.sleeping?a:b;
+      if(mover.kind!=="boat"){ wake(wall,150); }   // a boulder nudges the pile -> it shifts, then re-freezes
+      else {
+        // the boat glances off the frozen pile without moving it
+        const mnx=(mover===b)?nx:-nx, mny=(mover===b)?ny:-ny;
+        mover.x+=mnx*overlap; mover.y+=mny*overlap;
+        let vn=mover.vx*mnx+mover.vy*mny;
+        if(vn<0){ mover.vx-=(1+mover.restB)*vn*mnx; mover.vy-=(1+mover.restB)*vn*mny; }
+        const tx=-mny, ty=mnx; let vt=(mover.vx*tx+mover.vy*ty)*0.34;
+        vn=mover.vx*mnx+mover.vy*mny;
+        mover.vx=vn*mnx+vt*tx; mover.vy=vn*mny+vt*ty;
+        mover.vrot=-vt/mover.r*57.3*0.5;
+        if(wall.y>mover.y) mover.supported=true;
+        return;
+      }
+    }
+    const ima=a.held?0:1/a.mass, imb=b.held?0:1/b.mass, ims=ima+imb;
+    if(ims===0)return;
+    a.x-=nx*overlap*(ima/ims); a.y-=ny*overlap*(ima/ims);
+    b.x+=nx*overlap*(imb/ims); b.y+=ny*overlap*(imb/ims);
+    (a.y<b.y?a:b).supported=true;
+    const rvx=b.vx-a.vx, rvy=b.vy-a.vy, vn=rvx*nx+rvy*ny;
+    if(vn<0){
+      const e=Math.max(a.restB,b.restB);
+      const jn=-(1+e)*vn/ims;
+      a.vx-=jn*nx*ima; a.vy-=jn*ny*ima; b.vx+=jn*nx*imb; b.vy+=jn*ny*imb;
+      const tx=-ny, ty=nx; let vt=(b.vx-a.vx)*tx+(b.vy-a.vy)*ty;
+      const jt=-vt/ims*0.5;
+      a.vx-=jt*tx*ima; a.vy-=jt*ty*ima; b.vx+=jt*tx*imb; b.vy+=jt*ty*imb;
+    }
+  }
+  function stepPhysics(dt){
+    const sub=2, h=dt/sub;
+    for(let s=0;s<sub;s++){
+      for(const b of bodies){
+        if(b.held||b.sleeping||b.place)continue;
+        b.supported=false;
+        b.vy+=G*h;
+        b.vx=clamp(b.vx,-30,30); b.vy=clamp(b.vy,-36,36);
+        b.x+=b.vx*h; b.y+=b.vy*h; b.rot+=b.vrot*h;
+      }
+      for(const b of bodies){
+        if(b.held||b.sleeping||b.place)continue;
+        groundCollide(b);
+        if(b.x<-50){b.x=-50;b.vx=Math.abs(b.vx)*0.4;}
+        if(b.x>W+50){b.x=W+50;b.vx=-Math.abs(b.vx)*0.4;}
+      }
+      for(let it=0;it<4;it++)
+        for(let i=0;i<bodies.length;i++)
+          for(let j=i+1;j<bodies.length;j++)
+            collidePair(bodies[i],bodies[j]);
+    }
+    for(const b of bodies){
+      if(b.held||b.sleeping||b.place)continue;
+      if(Math.hypot(b.vx,b.vy)<0.35 && b.supported && now()>b.wakeUntil && Math.abs(slopeAt(b.x))<0.06){ if(++b.still>18){ b.sleeping=true; b.vx=b.vy=b.vrot=0; } }
+      else b.still=0;
+    }
+  }
+
+  /* ---- draw ---- */
+  function drawGround(){
+    if(!terrain.length)return;
+    let d="M"+terrain[0][0].toFixed(1)+" "+terrain[0][1].toFixed(1);
+    for(let i=1;i<terrain.length;i++) d+="L"+terrain[i][0].toFixed(1)+" "+terrain[i][1].toFixed(1);
+    groundPath.setAttribute("d",d);
+  }
+  function drawTex(t){
+    ctx.clearRect(0,0,W,H);
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let x=0;x<W;x+=11){ const gy=surfY(x);
+      for(let r=0;r<5;r++){ const y=gy+9+r*13; if(y>H)break;
+        const p=Math.sin(x*0.03+r*0.9+t*0.0005);
+        let ch = p>0.78?"·":(p<-0.86?"˙":null); if(!ch)continue;
+        ctx.fillStyle="rgba(107,101,85,"+((1-r/5)*0.15).toFixed(3)+")"; ctx.fillText(ch,x,y); } }
+  }
+  function render(){ for(const b of bodies) setXY(b.node,b.x,b.y,b.rot); }
+
+  /* ---- build / enter ---- */
+  function build(){
+    W=sec.clientWidth;H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    timers.forEach(clearTimeout); timers=[];
+    groundY=H*0.66;
+    buildCPs(); buildTerrain();
+    groundPath=el("path",{fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"});
+    svg.append(groundPath); drawGround();
+    bodies=[]; lastT=0;
+    attachDrag();
+    if(entered) runSequence();
+  }
+  function triTargets(){
+    const cx=W*0.6, B=surfY(cx)-R;
+    return [
+      {x:cx-2*R,y:B},{x:cx,y:B},{x:cx+2*R,y:B},   // base
+      {x:cx-R,y:B-ROWH},{x:cx+R,y:B-ROWH},         // middle
+      {x:cx,y:B-2*ROWH}                            // top
+    ];
+  }
+  function runSequence(){
+    const tg=triTargets();
+    // the whole triangle is already loaded and frozen in place (no drop-in), boat crowning the apex
+    for(let i=0;i<5;i++){ const p=tg[i];
+      const b=addRock(p.x,p.y);
+      b.mass=14; b.sleeping=true;                 // heavy + frozen: sits still until struck
+    }
+    const apex=tg[5];
+    const bt=addBoat(apex.x, apex.y-3); bt.sleeping=true;
+    // then a boulder rolls in, bumps the stack, and bounces back
+    timers.push(setTimeout(()=>{ const rx=-40; const r=addRock(rx,surfY(rx)-R); r.vx=5.8; r.fr=0.999; r.restB=0.52; }, 1300));
+  }
+  function enter(){ if(entered)return; entered=true; runSequence(); }
+
+  /* ---- interaction ---- */
+  function attachDrag(){
+    function lp(ev){const r=sec.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    sec.addEventListener("pointerdown",function(ev){
+      const p=lp(ev);
+      for(let i=bodies.length-1;i>=0;i--){ const b=bodies[i];
+        if(b.place)continue;
+        if(Math.hypot(p.x-b.x,p.y-b.y)<=b.r+6){
+          ev.preventDefault(); try{sec.setPointerCapture(ev.pointerId)}catch(e){}
+          b.held=true; b.sleeping=false; b.still=0; b.vx=0; b.vy=0; b.vrot=0;
+          drag={type:"body",b,dx:b.x-p.x,dy:b.y-p.y,vx:0,vy:0,ox:b.x,oy:b.y};
+          for(const o of bodies){ if(o!==b && !o.place && Math.abs(o.x-b.x)<2.4*R && o.y<b.y-2) wake(o); }
+          bodies.splice(i,1); bodies.push(b); svg.append(b.node);
+          return;
+        } }
+      // secret: only grab the ground when the click lands on the line itself
+      if(Math.abs(p.y-surfY(p.x))<14){
+        let xi=0,bx=1e9;
+        for(let i=0;i<cps.length;i++){ const d=Math.abs(p.x-cps[i].x); if(d<bx){bx=d;xi=i;} }
+        ev.preventDefault(); try{sec.setPointerCapture(ev.pointerId)}catch(e){}
+        drag={type:"ground",ci:xi};
+      }
+    });
+    sec.addEventListener("pointermove",function(ev){
+      if(!drag)return; const p=lp(ev);
+      if(drag.type==="body"){ const b=drag.b, nx=p.x+drag.dx, ny=p.y+drag.dy;
+        drag.vx=nx-b.x; drag.vy=ny-b.y; b.x=nx; b.y=ny; b.rot=0;
+        for(const o of bodies){ if(o!==b && !o.place && Math.abs(o.x-drag.ox)<2.4*R && o.y<drag.oy-2) wake(o); }
+      } else { const cp=cps[drag.ci];
+        cp.y=clamp(p.y,H*0.20,H*0.92);
+        if(drag.ci>0 && drag.ci<cps.length-1){ const lo=cps[drag.ci-1].x+34, hi=cps[drag.ci+1].x-34; cp.x=clamp(p.x,lo,hi); }
+        buildTerrain(); drawGround();
+        for(const b of bodies) wake(b);   // let the boulders respond to the new terrain
+      }
+    });
+    function up(ev){ if(!drag)return;
+      if(drag.type==="body"){ const b=drag.b; b.held=false; b.sleeping=false; b.still=0; b.vx=clamp(drag.vx,-30,30); b.vy=clamp(drag.vy,-34,34); }
+      drag=null; try{sec.releasePointerCapture(ev.pointerId)}catch(e){}
+    }
+    sec.addEventListener("pointerup",up); sec.addEventListener("pointercancel",up);
+  }
+
+  function tick(t){
+    const dt=lastT?clamp((t-lastT)/16.667,0.4,2.2):1; lastT=t;
+    drawTex(t);
+    // scripted placements (boulders + boat entrance)
+    for(const b of bodies){ if(!b.place)continue; const pl=b.place;
+      const k=clamp((t-pl.t0)/pl.dur,0,1);
+      if(k<=0){ b.x=pl.x; b.y=pl.fromY; }
+      else { b.x=pl.x; b.y=lerp(pl.fromY,pl.toY, pl.ease==="io"?easeInOut(k):easeIn(k)); }
+      if(k>=1){ b.place=null; b.sleeping=true; b.vx=b.vy=0; }
+    }
+    stepPhysics(dt);
+    render();
+  }
+  return {build,enter,tick,sec};
+}
+
+/* ---------- driver ---------- */
+const scenes=[Scene1(),Scene2(),Scene3()];
+const active=new Set();
+function buildAll(){ scenes.forEach(s=>s.build()); }
+buildAll();
+addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(buildAll,180); });
+
+const io=new IntersectionObserver((ents)=>{
+  ents.forEach(e=>{
+    const s=scenes.find(sc=>sc.sec===e.target);
+    if(!s) return;
+    if(e.isIntersecting){ active.add(s); if(e.intersectionRatio>0.35) s.enter(); }
+    else active.delete(s);
+  });
+},{threshold:[0,0.35,0.6]});
+scenes.forEach(s=>io.observe(s.sec));
+
+let last=now();
+function loop(t){
+  active.forEach(s=>s.tick(t));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+  <div class="brand-logo" aria-label="dabble"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGQ9Ik05NDIuODcsNTQ5LjdjLTEyMC4wNSwwLTIxNy44Myw5Ni45OS0yMTcuODMsMjE3LjAzLDAsNjkuNDcsMzIuNzUsMTMxLjQ5LDgzLjYxLDE3MS40MSwxOC4wOC0xNS44Myw0MC41My0yNS44OCw2NC4xOS0yOC43Ny01Mi41OS0yNi4wMS04OC45Ny04MC4yOC04OC45Ny0xNDIuNjQsMC04Ny40NSw3MS41NS0xNTguMiwxNTktMTU4LjJzMTU4LjIsNzAuNzUsMTU4LjIsMTU4LjItNjcuNDcsMTU1LjYzLTE1Mi4wNywxNTguODhjMjAuNDMsMTIuMTcsMzYuODMsMzAuNTEsNDYuOTIsNTIuMzgsNDAuNzYtMTAuMjYsNzcuMTEtMzIuMDcsMTA1LjE1LTYxLjh2NjQuNGg1OC44M3YtMjEzLjg2YzAtMTIwLjA0LTk2Ljk5LTIxNy4wMy0yMTcuMDMtMjE3LjAzWiIvPgo8cGF0aCBkPSJNMTEwMS4wNiwxMDE2LjExaDU4Ljh2Mjc0LjU2YzAsODcuNjEsNzAuNzUsMTU4LjM2LDE1OC4zNiwxNTkuMDZ2NTguOGMtMTIwLjE4LDAtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc0LjMyWiIvPgo8cGF0aCBkPSJNMTUwNS4zMSwxNDQ2LjY5YzEwLjMxLDEuNjQsMjAuNjIsMy4yOCwzMC45MiwzLjI4LDc3LjMxLDAsMTQxLjczLTU1Ljc1LDE1Ni4wMi0xMjkuNzhoNTkuNzRjLTE0LjI5LDEwNi41OS0xMDUuODksMTg4LjU4LTIxNS43NiwxODguNTgtMTIwLjE4LDAtMjE4LjEtOTcuOTItMjE4LjEtMjE4LjFzOTcuOTItMjE3LjE2LDIxOC4xLTIxNy4xNmM5Mi4zLDAsMTcxLjk1LDU3LjM5LDIwMi44NywxMzkuMzlsLTIzMy43OSwyMzMuNzlaTTE0NDcuMjEsMTQyMS44NmwyMjAuNDQtMjIwLjQ0Yy0yOC41OC00MS40Ni03Ny4zMS02OS4zNC0xMzEuNDItNjkuMzQtODcuNjEsMC0xNTkuMDYsNzAuNzUtMTU5LjA2LDE1OC4zNiwwLDU1LjA1LDI3Ljg4LDEwMi44NCw3MC4wNCwxMzEuNDJaIi8+CjxwYXRoIGQ9Ik02ODMuMjcsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2Ni4xMSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGQ9Ik0xMjAxLjQ2LDQ5MS4yM2g1OC44djEyNi41YzM5LjgyLTQyLjE3LDk2LjI4LTY4LjQsMTU4LjM2LTY4LjQsMTIwLjg4LDAsMjE4LjEsOTYuOTgsMjE4LjEsMjE3LjE2cy05Ni45OCwyMTguMS0yMTguMSwyMTguMS0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzUuMjZoMFpNMTI2MC4yNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggZD0iTTk3MC4wMywxMTE0LjI2Yy0zLjI2LTIuMzYtNi41OS00LjYyLTkuOTktNi43OSwwLS4wMS0uMDEtLjAxLS4wMS0uMDEtLjA4LjA3LS4xNi4xNS0uMjUuMjItMy4wNywyLjgtNi4zMSw1LjQyLTkuNyw3Ljg0LTExLjcyLDguNC0yNS4xNywxNC40Ny0zOS42OSwxNy41OS0uNjMuMTUtMS4yNy4yOC0xLjkxLjQtLjM1LjA2LS43LjEzLTEuMDUuMi0uNjYuMTMtMS4zNC4yNS0yLjAxLjM2LS44My4xNC0xLjY1LjI3LTIuNDguMzktLjgxLjExLTEuNjMuMjItMi40NC4zMi0uNjUuMDgtMS4yOS4xNS0xLjk0LjIxLTEuMjQuMTQtMi40OS4yNC0zLjc0LjMyLS43Mi4wNi0xLjQ0LjEtMi4xNy4xMy0uNjcuMDQtMS4zNC4wNi0yLjAxLjA4LS4xNC4wMS0uMjguMDEtLjQxLjAxLS4xOC4wMS0uMzcuMDEtLjU2LjAxLS43NS4wMi0xLjUuMDMtMi4yNi4wMy0yLjU4LDAtNS4xMy0uMDktNy42Ni0uMjctMS4yNy0uMDktMi41My0uMi0zLjc4LS4zMy0uNS0uMDUtLjk5LS4xLTEuNDktLjE3LTEuNDktLjE4LTIuOTctLjM5LTQuNDQtLjYyLTI5LjM1LTQuNzctNTQuNjUtMjEuNDItNzEuMDMtNDQuNzEtMi4xLTIuOTgtNC4wNC02LjA2LTUuODQtOS4yNS0uMjYtLjQ1LS41MS0uOTEtLjc1LTEuMzctLjA0LS4wNy0uMDgtLjE0LS4xMi0uMjEtLjA0LjAxLS4wNy4wMi0uMTEuMDMtMy45My45MS03LjgyLDEuOTQtMTEuNjcsMy4wNy0zNy40MSwxMS03MC44NCwzMS44OS05Ny4xNSw1OS42OHYtMTI2LjVoLTU4Ljh2Mjc1LjI2YzAsMTIwLjE4LDk2Ljk4LDIxOC4xLDIxNy4xNiwyMTguMXMyMTguMS05Ny45MiwyMTguMS0yMTguMWMwLTcyLjUtMzUuMjQtMTM2LjY1LTg5LjgtMTc1LjkyWk04NDEuOTYsMTQ0OS4yNWMtODcuNjEsMC0xNTguMzYtNzEuNjktMTU4LjM2LTE1OS4wN3M3MC43NS0xNTguMzYsMTU4LjM2LTE1OC4zNiwxNTkuMDcsNzAuNzUsMTU5LjA3LDE1OC4zNi03MC43NSwxNTkuMDctMTU5LjA3LDE1OS4wN1oiLz4KPHBhdGggY2xhc3M9ImNscy0yIiBkPSJNNzkyLjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0Ljk0LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg==" alt="dabble"></div>
+  <div class="brand-info" aria-label="info"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgICAgc3Ryb2tlOiAjMDAwOwogICAgICAgIHN0cm9rZS13aWR0aDogMTBweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMiIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBkPSJNNTguNDEsMzIuODdjLTMuMjgsMC02LjI3LDEuODgtNi4yNyw1LjY0czIuOTksNS43Miw2LjI3LDUuNzIsNi4yNy0xLjg5LDYuMjctNS43Mi0yLjk5LTUuNjQtNi4yNy01LjY0WiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI2OCA3MyA2OCA4MiA1Mi44MyA4MiA1Mi44MyA0OC4zNCA2My45OSA0OC4zNCA2My45OSA3MyA2OCA3MyIvPgogIDwvZz4KPC9zdmc+" alt="info"></div>
+</body>
+</html>

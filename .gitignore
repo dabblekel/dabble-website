@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python build cache
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Timestamped backups made while editing (build.py.bak-*, *.zip.bak-*, etc.)
+*.bak-*
+*.bak-*/
+
+# Scratch / discarded work
+hero-peel/_to_delete/
+hero-peel/build4/
+
+# Editor cruft
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dabble — About</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root{--ink:#14140f;--soft:#3b3830;--mute:#6b6555;--faint:#a0957f;--paper:#f3efe7}
+  body{background:var(--paper);color:var(--ink);
+      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;-webkit-font-smoothing:antialiased}
+
+  .scene{position:relative;width:100%;overflow:visible;padding-bottom:clamp(24px,5vh,56px)}
+  .stage{position:relative;inset:auto;width:100%;height:clamp(400px,62vh,660px);overflow-x:clip;overflow-y:visible;touch-action:pan-y}
+  .scene canvas.ascii{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+  .scene svg.art{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible}
+  .scene .copy{position:static;z-index:auto;max-width:1180px;line-height:1.9;
+      font-size:clamp(13px,1.15vw,15px);color:var(--soft);letter-spacing:.01em;
+      margin:0 auto clamp(22px,4vh,36px);padding:0 clamp(22px,5vw,56px)}
+  .scene .copy .box{padding:0;max-width:62ch;
+      background:none;
+      -webkit-backdrop-filter:none;backdrop-filter:none}
+  .scene .copy .box + .box{margin-top:1.6em}
+  .scene .copy p{margin:0 0 1.15em}
+  .scene .copy p:last-child{margin-bottom:0}
+  .scene .copy .lead{color:var(--ink)}
+  .scene .copy em{font-style:normal;color:var(--ink);font-weight:500}
+  .scene .copy a{color:var(--ink);text-decoration:none;border-bottom:1px solid rgba(20,20,15,0.35)}
+  .scene .copy a:hover{border-bottom-color:var(--ink)}
+
+  /* draggable objects carry pointer events; the rest of the art does not.
+     pointer-events is inherited, so setting it on the svg root (none) and the .grab
+     group (auto) lets the group's child shapes inherit auto and become hit targets. */
+  svg.art{pointer-events:none}
+  svg.art .grab{pointer-events:auto;cursor:grab;touch-action:none}
+  svg.art .grab.dragging{cursor:grabbing}
+
+  .hint{position:absolute;z-index:3;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+      color:var(--faint);opacity:0;transition:opacity .6s ease}
+  .hint.on{opacity:1}
+  .movehint{position:absolute;z-index:5;font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+      color:var(--mute);pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .5s ease;
+      transform:translateY(-50%)}
+  .movehint.on{opacity:.8}
+
+  /* copy placement per scene (text sits in its own band above the interactive stage) */
+  #s1 .page-title{position:static;z-index:auto;margin:0 auto;max-width:1180px;padding:clamp(56px,9vh,104px) clamp(22px,5vw,56px) 0;
+      font-weight:700;letter-spacing:-.03em;font-size:clamp(1.9rem,4.6vw,3.2rem);line-height:1;color:var(--ink)}
+  #s1 .copy{margin-top:clamp(18px,3vh,28px)}
+  #s2, #s3{padding-top:clamp(48px,8vh,96px)}
+
+  @media(max-width:680px){
+    /* same separated layout as desktop, only tighter sizing for phones */
+    .stage{height:clamp(360px,58vh,560px)}
+    .scene .copy{max-width:100%;padding:0 clamp(22px,5vw,56px);margin-bottom:clamp(20px,4vh,36px)}
+    .scene .copy .box{max-width:100%}
+    .scene .copy .box + .box{margin-top:1.5em}
+    #s1 .page-title{padding:clamp(64px,10vh,96px) clamp(22px,5vw,56px) 0}
+    #s2, #s3{padding-top:clamp(40px,7vh,72px)}
+  }
+
+  @media(min-width:681px){
+    /* scene 2: split the copy into two columns side by side */
+    #s2 .copy{display:flex;gap:clamp(28px,4vw,64px);align-items:flex-start;max-width:1180px}
+    #s2 .copy .box{flex:1 1 0;max-width:46ch}
+    #s2 .copy .box + .box{margin-top:0}
+    /* scene 3 has little copy: overlay it near the art, the way it was before */
+    #s3{padding:0;min-height:100vh}
+    #s3 .stage{position:absolute;inset:0;height:auto}
+    #s3 .copy{position:absolute;z-index:3;left:0;right:0;margin:0 auto;max-width:1180px;
+        padding:0 clamp(22px,5vw,56px);top:clamp(70px,12vh,120px);pointer-events:none}
+    #s3 .copy .box{max-width:56ch}
+    #s3 .copy a{pointer-events:auto}
+  }
+  /* ---- match the Stories / Dabblers content column across the whole page ---- */
+  @media(min-width:760px){
+    #sheet{padding-left:calc(clamp(18px,3vw,40px) + clamp(96px,10.5vw,148px));padding-right:calc(clamp(20px,2.4vw,34px) + clamp(26px,2.6vw,36px))}
+    .scene .copy{padding-left:clamp(10px,1.6vw,30px);padding-right:clamp(10px,1.6vw,30px)}
+    #s1 .page-title{padding-left:clamp(10px,1.6vw,30px);padding-right:clamp(10px,1.6vw,30px)}
+    #s3 .copy{padding-left:clamp(10px,1.6vw,30px);padding-right:clamp(10px,1.6vw,30px)}
+    /* the interactive scenes stay full-bleed, breaking out of the sheet inset */
+    #s1 .stage,#s2 .stage{width:auto;margin-left:calc(-1 * (clamp(18px,3vw,40px) + clamp(96px,10.5vw,148px)));margin-right:calc(-1 * (clamp(20px,2.4vw,34px) + clamp(26px,2.6vw,36px)))}
+    #s3 .stage{width:auto;left:calc(-1 * (clamp(18px,3vw,40px) + clamp(96px,10.5vw,148px)));right:calc(-1 * (clamp(20px,2.4vw,34px) + clamp(26px,2.6vw,36px)))}
+  }
+  /* Scene 3 copy sits a little higher on horizontal (landscape) screens such as
+     desktops; on vertical (portrait) screens - phones and portrait tablets - it keeps
+     its original height, where the same nudge would read as too large. */
+  @media(min-width:681px) and (orientation:landscape){
+    #s3 .copy{top:clamp(20px,4vh,44px)}
+  }
+  
+  /* ---- the corner lift, on a sub-page ----
+     Same fold, same sunrise, same nav as the hero: the CSS below and the sky maths in the
+     script are taken verbatim from H-peel.txt by tools/mklift. What differs is the host.
+     The hero drives the peel from its HERO object and fades the bloom out behind the sky;
+     a sub-page has no bloom, so it fades its own content on the same curve and runs the
+     peel on a small frame-loop shim. Two implementations of one idea: if you retune the
+     peel in H-peel.txt, regenerate this. */
+  .dawn{position:fixed;left:100%;top:100%;z-index:984;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  .glow{position:fixed;left:0;top:0;z-index:985;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  .grain{position:fixed;inset:0;z-index:987;pointer-events:none;mix-blend-mode:overlay;opacity:0;
+      transition:opacity .9s ease;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+      background-size:140px 140px}
+  .paper{position:fixed;left:100%;top:100%;z-index:990;transform-origin:0 0;will-change:transform;
+      background:linear-gradient(180deg,#e9e4da 0px,#fbf8f2 760px,#f5f1e9 1800px)}
+  .under{position:fixed;inset:0;z-index:991;pointer-events:none;
+      -webkit-user-select:none;user-select:none}
+  .under.live ol{pointer-events:auto}
+  .under ol{pointer-events:none;list-style:none;position:absolute;right:clamp(26px,4.4vw,64px);bottom:clamp(26px,4.6vh,60px);
+      text-align:right;display:grid;gap:clamp(6px,1.4vh,14px)}
+  .under li{font-family:'Roboto Mono',monospace;font-weight:500;text-transform:uppercase;
+      letter-spacing:.02em;line-height:1;color:#12120f;cursor:pointer;
+      font-size:clamp(1rem,2.9vw,2.35rem)}
+  .under li span{display:inline-block;transition:transform .28s cubic-bezier(.2,.8,.2,1),color .2s ease}
+  .under li:hover span{transform:translateX(-14px);color:#e4581a}
+  .fold{position:fixed;z-index:995;left:100%;top:100%;height:1px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0}
+  .limbGlow{position:fixed;left:0;top:0;z-index:988;height:26px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;
+      background:linear-gradient(0deg,rgba(255,152,36,.92),rgba(255,126,20,.55) 34%,rgba(255,110,10,0) 100%)}
+  .limb{position:fixed;left:0;top:0;z-index:989;height:3px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;filter:blur(1px)}
+  .dog{position:fixed;right:clamp(20px,2.4vw,34px);bottom:clamp(18px,2.4vh,30px);z-index:940;
+      cursor:pointer;width:clamp(26px,2.6vw,36px);line-height:0}
+  .dog img{display:block;width:100%;height:auto;pointer-events:none}
+  .logo{position:fixed;left:clamp(18px,3vw,40px);bottom:clamp(16px,3vh,34px);z-index:1000;
+      width:clamp(96px,10.5vw,148px);pointer-events:none}
+  .logo img{display:block;width:100%;height:auto;position:absolute;left:0;bottom:0}
+  .logo img.b{opacity:0}
+  .logo .spacer{position:static;display:block;width:100%;visibility:hidden}
+
+  /* ---- what changes because a sub-page is cream, not black ----
+     The hero rests on a near-black bloom, so its info mark is the white drawing and its
+     wordmark stays white until the paper or the sun reaches it. Here the resting ground
+     is cream, so both of those read as invisible-on-invisible. The info mark is swapped
+     for the black drawing in the script below, and the wordmark's flip is inverted. */
+  /* the page arrives blank: the lift's frame loop fades the content and the mark in */
+  #sheet{opacity:0}
+  /* The hero's mark is decorative and carries pointer-events:none. Here it is the link
+     home, so it has to take a click - and the nav list has to as well, once the page
+     underneath it is hidden. */
+  .logo{pointer-events:auto;cursor:pointer}
+
+
+</style>
+<noscript><style>#sheet{opacity:1!important;visibility:visible!important}</style></noscript>
+</head>
+<body>
+<div id="sheet">
+<main>
+  <section class="scene" id="s1">
+    <h1 class="page-title">About</h1>
+    <div class="copy">
+      <div class="box">
+        <p class="lead">The best path to roll a boulder depends on the terrain.</p>
+        <p class="lead">The best route to sail a ship depends on the wind.</p>
+      </div>
+      <div class="box">
+        <p>Without reading the terrain or the wind, you risk pushing harder up the wrong hill, or rowing blind.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <canvas class="ascii"></canvas>
+      <svg class="art" id="art1"></svg>
+      <div class="movehint" id="mh-rock">move me!</div>
+      <div class="movehint" id="mh-boat">move me!</div>
+    </div>
+  </section>
+
+  <section class="scene" id="s2">
+    <div class="copy">
+      <div class="box">
+        <p>At Dabble, we read the grain of the systems that surround a problem and use the conditions
+           most advantageous — technically, financially, and culturally — to unlock it.</p>
+      </div>
+      <div class="box">
+        <p>This leads us to build:</p>
+        <p><em>Products</em> that roll downhill on their own, gaining momentum instead of requiring force.</p>
+        <p><em>Companies</em> that sell into markets already leaning toward the winds, rather than markets we have to convince.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <canvas class="ascii"></canvas>
+      <svg class="art" id="art2"></svg>
+    </div>
+  </section>
+
+  <section class="scene" id="s3">
+    <div class="copy">
+      <div class="box">
+        <p class="lead">The products we put into the world have the potential to change systems from the ground up.</p>
+        <p class="lead">We put these solutions into the world through our own in-house R&amp;D efforts, as well as collaborating with likeminded clients and visionary creative partners.</p>
+      </div>
+      <div class="box">
+        <p>Interested in Dabbling with us?</p>
+        <p>Let us know<br>--&gt; <a href="mailto:hello@dabble.team">hello@dabble.team</a></p>
+      </div>
+    </div>
+    <div class="stage">
+      <canvas class="ascii"></canvas>
+      <svg class="art" id="art3"></svg>
+      <div class="movehint" id="mh-ground">drag me!</div>
+    </div>
+  </section>
+</main>
+</div>
+
+  <div class="dawn" id="dawn"></div>
+  <div class="glow" id="glow"></div>
+  <div class="grain" id="grain"></div>
+  <div class="paper" id="paper"></div>
+  <div class="under" id="under"><ol id="underList"></ol></div>
+  <div class="limbGlow" id="limbGlow"></div>
+  <div class="fold" id="fold"></div>
+  <div class="limb" id="limb"></div>
+  <div class="dog" id="dog" title="lift"></div>
+  <a class="logo" id="logo" href="dabble-hero-peel.html"></a>
+
+
+<script>
+const SVGNS="http://www.w3.org/2000/svg";
+const INK="#14140f", SOFT="#3b3830", MUTE="#6b6555", FAINT="#b5ac9b";
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeOut=t=>1-Math.pow(1-t,3);
+const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeRoll=t=>{ if(t<0.86){const u=t/0.86;return Math.pow(u,2.2)*0.9;} const u=(t-0.86)/0.14; return 0.9+(1-(1-u)*(1-u))*0.1; };
+const now=()=>performance.now();
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+/* smooth path through points (Catmull-Rom -> cubic bezier) */
+function smoothPath(pts){
+  if(pts.length<2) return "";
+  let d="M"+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+="C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+p2[0].toFixed(1)+" "+p2[1].toFixed(1);
+  }
+  return d;
+}
+
+/* ---------- boat + rock builders ---------- */
+function makeBoat(scale){
+  const g=el("g",{class:"boat"});
+  const s=scale;
+  const hull=el("path",{d:`M ${-30*s} ${6*s} Q ${-34*s} ${16*s} ${-22*s} ${18*s} L ${22*s} ${18*s} Q ${34*s} ${16*s} ${30*s} ${6*s} Z`,
+      fill:"var(--paper)",stroke:INK,"stroke-width":2.4});
+  const mast=el("line",{x1:0,y1:6*s,x2:0,y2:-34*s,stroke:INK,"stroke-width":2.4});
+  const main=el("path",{d:`M ${3*s} ${-32*s} L ${3*s} ${2*s} L ${26*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  const jib=el("path",{d:`M ${-3*s} ${-24*s} L ${-3*s} ${2*s} L ${-20*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  g.append(hull,jib,main,mast);
+  return g;
+}
+function makeRock(r){
+  const g=el("g",{class:"rock"});
+  const c=el("circle",{cx:0,cy:0,r:r,fill:SOFT});
+  g.append(c);
+  return g;
+}
+function setXY(g,x,y,rot,extra){
+  g.setAttribute("transform",`translate(${x.toFixed(1)} ${y.toFixed(1)})`+(rot?` rotate(${rot.toFixed(1)})`:"")+(extra||""));
+}
+
+/* ============================================================= SCENE 1 */
+function Scene1(){
+  const sec=document.getElementById("s1");
+  const svg=document.getElementById("art1");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  const stage=sec.querySelector(".stage");
+  const mhRock=document.getElementById("mh-rock"), mhBoat=document.getElementById("mh-boat");
+  let mhRockGone=false, mhBoatGone=false;
+  // valley on the left (uphill both sides), then a shore down into the sea on the right
+  const CP=[[-0.05,0.205],[0.14,0.225],[0.35,0.375],[0.55,0.605],[0.72,0.44],[0.88,0.275],[1.06,0.30]];
+  const G=0.85, FR=0.955;
+  let W,H,waterY,terrain,shoreX,floorX,groundEndX,startX,boatHome,entered=false,lastT=0;
+  let boat,rock,waterline,terrainPath,crests=[];
+  let rockX=0,rockVX=0,rockPos={x:0,y:0,rot:0},rockState="idle",rockSunk=false,fallAnim=null,rockDrag=null;
+  let boatPos={x:0,y:0},boatAnim=null,boatFallAnim=null,boatDrag=null,boatMode="water";
+
+  function buildTerrain(){
+    const P=CP.map(function(c){return [c[0]*W,c[1]*H];});
+    const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=26;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    return s;
+  }
+  function surfY(x){
+    const s=terrain;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+2)-surfY(x-2))/4; }
+  function findFloorX(){ let bx=W*0.5,by=-1; for(let x=W*0.28;x<W*0.74;x+=2){const y=surfY(x); if(y<waterY && y>by){by=y;bx=x;}} return bx; }
+  function findShoreX(){ for(let x=floorX;x<W;x+=2){ if(surfY(x)>=waterY) return x; } return W; }
+
+  function build(){
+    W=stage.clientWidth;H=stage.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    waterY=H*0.66;
+    terrain=buildTerrain(); floorX=findFloorX(); shoreX=0; groundEndX=findShoreX(); startX=W*0.40;
+    let d="";
+    for(let i=0;i<terrain.length;i++){ const P=terrain[i]; d+=(i?"L":"M")+P[0].toFixed(1)+" "+P[1].toFixed(1); }
+    terrainPath=el("path",{d:d,fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"}); svg.append(terrainPath);
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"}); svg.append(waterline);
+    crests=[];
+    for(let i=0;i<6;i++){ const cx=lerp(W*0.08,W*0.92,i/5); const cr=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.2,"stroke-linecap":"round",opacity:.55}); cr._x=cx; cr._ph=Math.random()*6.28; crests.push(cr); svg.append(cr); }
+    boatHome={x:W*(W<=680?0.68:0.80),y:waterY+10};
+    rock=makeRock(18); rock.classList.add("grab"); svg.append(rock);
+    boat=makeBoat(1.0); boat.classList.add("grab"); svg.append(boat);
+    rockX=entered?floorX:startX; rockVX=0; rockState="idle"; rockSunk=false; fallAnim=null;
+    rockPos={x:rockX,y:surfY(rockX)-18,rot:0};
+    boatPos={x:boatHome.x,y:boatHome.y}; boatMode="water"; boatAnim=null; boatFallAnim=null; lastT=0;
+    attachDrag();
+  }
+
+  function drawWater(t){
+    ctx.clearRect(0,0,W,H);
+    const chW=9,chH=13,rows=Math.ceil((H-waterY)/chH)+1;
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let r=0;r<rows;r++){ const y=waterY+r*chH, depth=r/rows, alpha=(1-depth)*0.42; if(alpha<=0.02)continue;
+      for(let x=shoreX;x<W;x+=chW){ const p=Math.sin(x*0.021+t*0.0022+r*0.55)+0.6*Math.cos(x*0.011-t*0.0014+r*0.3);
+        let ch; if(p>0.95)ch="≈"; else if(p>0.12)ch="~"; else continue;
+        ctx.fillStyle="rgba(59,56,48,"+(alpha*(ch==="≈"?1:0.85)).toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function layoutWaterline(t){
+    let d="M"+shoreX.toFixed(1)+" "+waterY.toFixed(1);
+    for(let x=shoreX;x<=W;x+=W/40){ const y=waterY+Math.sin(x*0.03+t*0.0016)*3.2+Math.sin(x*0.013-t*0.0011)*2.0; d+="L"+x.toFixed(1)+" "+y.toFixed(1); }
+    waterline.setAttribute("d",d);
+    crests.forEach(function(cr){ const bob=Math.sin(t*0.002+cr._ph)*3, x=cr._x, y=waterY-10+bob; cr.setAttribute("d","M"+(x-14).toFixed(1)+" "+y.toFixed(1)+" q7 -6 14 0 q7 6 14 0"); });
+  }
+  function splashAt(x,y){
+    const g=el("g",{}); g.setAttribute("transform","translate("+x.toFixed(1)+" "+y.toFixed(1)+")");
+    for(let i=0;i<7;i++){ const a=-Math.PI*(0.12+0.76*(i/6));
+      const drop=el("line",{x1:0,y1:0,x2:0,y2:-7,stroke:SOFT,"stroke-width":1.6,"stroke-linecap":"round"}); g.append(drop);
+      const r=24+Math.random()*20,dx=Math.cos(a)*r,dy=Math.sin(a)*r;
+      drop.animate([{transform:"translate(0px,0px)",opacity:1},{transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)",opacity:0}],{duration:520+Math.random()*180,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}); }
+    const ring=el("path",{d:"M-18 0 q18 -12 36 0",fill:"none",stroke:SOFT,"stroke-width":1.4}); g.append(ring);
+    ring.animate([{opacity:.9,transform:"scale(0.4)"},{opacity:0,transform:"scale(1.35)"}],{duration:520,easing:"ease-out",fill:"forwards"});
+    svg.append(g); setTimeout(function(){ if(g.parentNode)g.parentNode.removeChild(g); },1000);
+  }
+
+  function physicsStep(dt){
+    const sl=slopeAt(rockX);
+    rockVX += G*sl*dt;
+    rockVX *= Math.pow(FR,dt);
+    rockX += rockVX*dt;
+    if(rockX<8){rockX=8;rockVX=Math.abs(rockVX)*0.3;}
+    const sy=surfY(rockX);
+    if(sy>waterY){ sinkFrom(rockX,sy); return; }        // rolled into the water -> sink
+    if(rockX>W+40){ rockState="gone"; return; }          // rolled off the right edge -> let it go
+    rockPos.x=rockX; rockPos.y=sy-18; rockPos.rot += rockVX*dt*1.1;
+    if(Math.abs(rockVX)<0.05 && Math.abs(sl)<0.02){ rockVX=0; rockState="idle"; }
+  }
+  function sinkFrom(x,fromY){
+    rockState="sink"; rockSunk=true;
+    const startY=fromY, fallDur=(fromY<waterY)?Math.max(240,(waterY-fromY)*1.3):0;
+    const t0=now(), sinkStart=t0+fallDur, sinkDur=1500; let splashed=false;
+    fallAnim=function(t){
+      if(t<sinkStart){ const k=clamp((t-t0)/Math.max(1,fallDur),0,1); rockPos.x=x; rockPos.y=lerp(startY,waterY,k*k); rockPos.rot+=4; }
+      else { if(!splashed){splashed=true;splashAt(x,waterY);} const k=clamp((t-sinkStart)/sinkDur,0,1); rockPos.x=x+Math.sin(t*0.006)*3*(1-k); rockPos.y=lerp(waterY,H+30,easeInOut(k)); rockPos.rot+=5; rock.style.opacity=clamp((H-rockPos.y)/((H-waterY)*0.6),0,1); if(k>=1)fallAnim=null; }
+    };
+  }
+  function boatFall(x,fromY,toY,mode,splash){
+    boatMode="fall"; boatFallAnim=null;
+    if(fromY>=toY-2){ boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; return; }
+    const t0=now(), dur=Math.max(180,(toY-fromY)*0.85);
+    boatFallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=x; boatPos.y=lerp(fromY,toY,k*k);
+      if(k>=1){ boatFallAnim=null; boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; } };
+  }
+  function landThenRoll(x,fromY){
+    const surf=surfY(x)-18;
+    if(fromY>=surf-2){ rockX=x; rockVX=0; rockState="roll"; return; }
+    rockState="fall";
+    const t0=now(), dur=Math.max(160,(surf-fromY)*1.05);
+    fallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); rockPos.x=x; rockPos.y=lerp(fromY,surf,k*k); if(k>=1){ fallAnim=null; rockX=x; rockVX=0; rockState="roll"; } };
+  }
+
+  function enter(){
+    if(entered)return; entered=true;
+    rockX=startX; rockVX=0; rockPos.x=rockX; rockPos.y=surfY(rockX)-18; rockState="roll";
+    const bx0=W+80,t0=now(),dur=1700; boatPos.x=bx0;
+    boatAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=lerp(bx0,boatHome.x,easeOut(k)); if(k>=1)boatAnim=null; };
+    setTimeout(function(){ if(!mhRockGone&&mhRock)mhRock.classList.add("on"); if(!mhBoatGone&&mhBoat)mhBoat.classList.add("on"); },1200);
+  }
+
+  function attachDrag(){
+    function pt(ev){const r=stage.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    rock.addEventListener("pointerdown",function(ev){ if(rockSunk)return; ev.preventDefault(); mhRockGone=true; if(mhRock)mhRock.classList.remove("on"); rock.classList.add("dragging"); rock.setPointerCapture(ev.pointerId); rockState="idle"; rockVX=0; fallAnim=null; const p=pt(ev); rockDrag={dx:rockPos.x-p.x,dy:rockPos.y-p.y}; });
+    rock.addEventListener("pointermove",function(ev){ if(!rockDrag)return; const p=pt(ev); rockPos.x=p.x+rockDrag.dx; rockPos.y=p.y+rockDrag.dy; rockPos.rot=0; });
+    function rockUp(ev){ if(!rockDrag)return; rockDrag=null; rock.classList.remove("dragging"); try{rock.releasePointerCapture(ev.pointerId)}catch(e){} const x=clamp(rockPos.x,0,W); if(x>=groundEndX || rockPos.y>waterY || rockPos.y>surfY(x)+10){ sinkFrom(x,rockPos.y); } else { landThenRoll(x,rockPos.y); } }
+    rock.addEventListener("pointerup",rockUp); rock.addEventListener("pointercancel",rockUp);
+    boat.addEventListener("pointerdown",function(ev){ ev.preventDefault(); mhBoatGone=true; if(mhBoat)mhBoat.classList.remove("on"); boat.classList.add("dragging"); boat.setPointerCapture(ev.pointerId); boatAnim=null; boatFallAnim=null; boatMode="drag"; const p=pt(ev); boatDrag={dx:boatPos.x-p.x,dy:boatPos.y-p.y}; });
+    boat.addEventListener("pointermove",function(ev){ if(!boatDrag)return; const p=pt(ev); boatPos.x=p.x+boatDrag.dx; boatPos.y=p.y+boatDrag.dy; });
+    function boatUp(ev){ if(!boatDrag)return; boatDrag=null; boat.classList.remove("dragging"); try{boat.releasePointerCapture(ev.pointerId)}catch(e){}
+      const x=clamp(boatPos.x,0,W), surf=surfY(x);
+      if(x < groundEndX && boatPos.y < surf){ boatFall(x,boatPos.y, surf-16, "land", false); }          // above the hill line -> land on the hill
+      else if(boatPos.y < waterY){ boatFall(x,boatPos.y, waterY+10, "water", true); } // below the hill line, above the water -> plop + splash
+      else { boatMode="water"; }                                                       // in the water -> stays where dropped, rocks
+    }
+    boat.addEventListener("pointerup",boatUp); boat.addEventListener("pointercancel",boatUp);
+  }
+
+  function layoutObjects(t){
+    let bx=boatPos.x,by=boatPos.y,brot=0;
+    if(boatMode==="water"){ by=boatPos.y+Math.sin(t*0.0026+bx*0.01)*4; brot=Math.sin(t*0.0026+bx*0.01+0.6)*4; }
+    setXY(boat,bx,by,brot);
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+    if(mhRock){ mhRock.style.left=(rockPos.x+24).toFixed(0)+"px"; mhRock.style.top=(rockPos.y-30).toFixed(0)+"px"; }
+    if(mhBoat){ mhBoat.style.left=(bx+34).toFixed(0)+"px"; mhBoat.style.top=(by-36).toFixed(0)+"px"; }
+  }
+  function tick(t){
+    const dt = lastT? clamp((t-lastT)/16.667,0.4,2.4):1; lastT=t;
+    drawWater(t); layoutWaterline(t);
+    if(rockState==="roll") physicsStep(dt);
+    if(fallAnim) fallAnim(t);
+    if(boatFallAnim) boatFallAnim(t);
+    if(boatAnim) boatAnim(t);
+    layoutObjects(t);
+  }
+  return {build,enter,tick,sec,stage};
+}
+
+/* ============================================================= SCENE 2 */
+function Scene2(){
+  const sec=document.getElementById("s2");
+  const svg=document.getElementById("art2");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  const stage=sec.querySelector(".stage");
+  // hill on the LEFT descending to the water; open water full width to the right
+  const CP=[[-0.05,0.23],[0.10,0.25],[0.22,0.33],[0.33,0.49],[0.42,0.575],[0.50,0.61],[0.60,0.64],[0.74,0.70],[1.06,0.73]];
+  const G=0.85, FR=0.955, DRIFT=0.35;
+  let W,H,waterY,terrain,restX,groundEndX,entered=false,lastT=0;
+  let boat,rock,waterline,terrainPath,crests=[],curls=[];
+  let rockX=0,rockVX=0,rockPos={x:0,y:0,rot:0},rockState="idle",rockSunk=false,fallAnim=null,rockDrag=null;
+  let boatPos={x:0,y:0},boatFallAnim=null,boatDrag=null,boatMode="water";
+
+  function buildTerrain(){
+    const P=CP.map(function(c){return [c[0]*W,c[1]*H];});
+    const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=26;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    return s;
+  }
+  function surfY(x){
+    const s=terrain;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+2)-surfY(x-2))/4; }
+
+  function build(){
+    W=stage.clientWidth;H=stage.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    waterY=H*0.63; terrain=buildTerrain(); restX=W*0.56;
+    // hill line: draw until it nears the water, then let the waterline take over
+    let d="";groundEndX=W;
+    for(let i=0;i<terrain.length;i++){ const P=terrain[i]; d+=(i?"L":"M")+P[0].toFixed(1)+" "+P[1].toFixed(1); if(P[0]>restX+34 && P[1]>=waterY+3){ groundEndX=P[0]; break; } }
+    terrainPath=el("path",{d:d,fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"}); svg.append(terrainPath);
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"}); svg.append(waterline);
+    crests=[]; for(let i=0;i<6;i++){ const cx=lerp(W*0.08,W*0.92,i/5); const cr=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.2,"stroke-linecap":"round",opacity:.5}); cr._x=cx; cr._ph=Math.random()*6.28; crests.push(cr); svg.append(cr); }
+    // wind curls, centre-upper over the water
+    curls=[]; const spots=[[W*0.46,H*0.20],[W*0.56,H*0.15],[W*0.53,H*0.33],[W*0.64,H*0.27]];
+    spots.forEach(function(sp){ const c=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.3,"stroke-linecap":"round",opacity:.6}); c._x=sp[0];c._y=sp[1];c._sc=0.8+Math.random()*0.5;c._ph=Math.random()*6.28; curls.push(c); svg.append(c); });
+    rock=makeRock(18); rock.classList.add("grab"); svg.append(rock);
+    boat=makeBoat(1.1); boat.classList.add("grab"); svg.append(boat);
+    // boulder rests at the foot of the hill (no entrance animation); boat drifts in from the left
+    rockX=restX; rockVX=0; rockState="idle"; rockSunk=false; fallAnim=null;
+    rockPos={x:rockX,y:surfY(rockX)-18,rot:0};
+    boatPos={x:-50,y:waterY+10}; boatMode="water"; boatFallAnim=null; lastT=0;
+    attachDrag();
+  }
+
+  function drawWater(t){
+    ctx.clearRect(0,0,W,H);
+    const chW=9,chH=13,rows=Math.ceil((H-waterY)/chH)+1;
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let r=0;r<rows;r++){ const y=waterY+r*chH, depth=r/rows, alpha=(1-depth)*0.42; if(alpha<=0.02)continue;
+      for(let x=0;x<W;x+=chW){ const p=Math.sin(x*0.021+t*0.0022+r*0.55)+0.6*Math.cos(x*0.011-t*0.0014+r*0.3);
+        let ch; if(p>0.95)ch="≈"; else if(p>0.12)ch="~"; else continue;
+        ctx.fillStyle="rgba(59,56,48,"+(alpha*(ch==="≈"?1:0.85)).toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function drawWind(t){
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    const wy0=H*0.13, wy1=H*0.46, x0=W*0.40, x1=W*0.74, chH=15;
+    for(let y=wy0;y<wy1;y+=chH){ const row=(y-wy0)/chH;
+      for(let x=x0;x<x1;x+=9){ const drift=(x - t*0.055*(1+row*0.2)); const p=Math.sin(drift*0.03+row);
+        let ch; if(p>0.9)ch="~"; else if(p>0.6)ch="⌒"; else continue;
+        const a=(1-(y-wy0)/(wy1-wy0))*0.26; ctx.fillStyle="rgba(107,101,85,"+a.toFixed(3)+")"; ctx.fillText(ch,x,y);} }
+  }
+  function layoutWaterline(t){
+    let d="M0 "+waterY.toFixed(1);
+    for(let x=0;x<=W;x+=W/40){ const y=waterY+Math.sin(x*0.03+t*0.0016)*3.2+Math.sin(x*0.013-t*0.0011)*2.0; d+="L"+x.toFixed(1)+" "+y.toFixed(1); }
+    waterline.setAttribute("d",d);
+    crests.forEach(function(cr){ const bob=Math.sin(t*0.002+cr._ph)*3, x=cr._x, y=waterY-10+bob; cr.setAttribute("d","M"+(x-14).toFixed(1)+" "+y.toFixed(1)+" q7 -6 14 0 q7 6 14 0"); });
+    curls.forEach(function(c){ const rot=Math.sin(t*0.0009+c._ph)*10, drift=Math.sin(t*0.0006+c._ph)*12, sc=c._sc;
+      const dd="M "+(-26*sc)+" 0 q "+(16*sc)+" "+(-14*sc)+" "+(30*sc)+" "+(-2*sc)+" q "+(12*sc)+" "+(10*sc)+" "+(2*sc)+" "+(14*sc)+" q "+(-8*sc)+" "+(3*sc)+" "+(-9*sc)+" "+(-6*sc);
+      c.setAttribute("d",dd); c.setAttribute("transform","translate("+(c._x+drift).toFixed(1)+" "+c._y.toFixed(1)+") rotate("+rot.toFixed(1)+")"); });
+  }
+  function splashAt(x,y){
+    const g=el("g",{}); g.setAttribute("transform","translate("+x.toFixed(1)+" "+y.toFixed(1)+")");
+    for(let i=0;i<7;i++){ const a=-Math.PI*(0.12+0.76*(i/6));
+      const drop=el("line",{x1:0,y1:0,x2:0,y2:-7,stroke:SOFT,"stroke-width":1.6,"stroke-linecap":"round"}); g.append(drop);
+      const r=24+Math.random()*20,dx=Math.cos(a)*r,dy=Math.sin(a)*r;
+      drop.animate([{transform:"translate(0px,0px)",opacity:1},{transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)",opacity:0}],{duration:520+Math.random()*180,easing:"cubic-bezier(.2,.7,.3,1)",fill:"forwards"}); }
+    const ring=el("path",{d:"M-18 0 q18 -12 36 0",fill:"none",stroke:SOFT,"stroke-width":1.4}); g.append(ring);
+    ring.animate([{opacity:.9,transform:"scale(0.4)"},{opacity:0,transform:"scale(1.35)"}],{duration:520,easing:"ease-out",fill:"forwards"});
+    svg.append(g); setTimeout(function(){ if(g.parentNode)g.parentNode.removeChild(g); },1000);
+  }
+  function physicsStep(dt){
+    const sl=slopeAt(rockX);
+    rockVX += G*sl*dt; rockVX *= Math.pow(FR,dt); rockX += rockVX*dt;
+    if(rockX<8){rockX=8;rockVX=Math.abs(rockVX)*0.3;}
+    const sy=surfY(rockX);
+    if(rockX>=groundEndX || sy>waterY){ sinkFrom(rockX,sy); return; }
+    rockPos.x=rockX; rockPos.y=sy-18; rockPos.rot += rockVX*dt*1.1;
+    if(Math.abs(rockVX)<0.05 && Math.abs(sl)<0.02){ rockVX=0; rockState="idle"; }
+  }
+  function sinkFrom(x,fromY){
+    rockState="sink"; rockSunk=true;
+    const startY=fromY, fallDur=(fromY<waterY)?Math.max(240,(waterY-fromY)*1.3):0;
+    const t0=now(), sinkStart=t0+fallDur, sinkDur=1500; let splashed=false;
+    fallAnim=function(t){
+      if(t<sinkStart){ const k=clamp((t-t0)/Math.max(1,fallDur),0,1); rockPos.x=x; rockPos.y=lerp(startY,waterY,k*k); rockPos.rot+=4; }
+      else { if(!splashed){splashed=true;splashAt(x,waterY);} const k=clamp((t-sinkStart)/sinkDur,0,1); rockPos.x=x+Math.sin(t*0.006)*3*(1-k); rockPos.y=lerp(waterY,H+30,easeInOut(k)); rockPos.rot+=5; rock.style.opacity=clamp((H-rockPos.y)/((H-waterY)*0.6),0,1); if(k>=1)fallAnim=null; }
+    };
+  }
+  function boatFall(x,fromY,toY,mode,splash){
+    boatMode="fall"; boatFallAnim=null;
+    if(fromY>=toY-2){ boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; return; }
+    const t0=now(), dur=Math.max(180,(toY-fromY)*0.85);
+    boatFallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); boatPos.x=x; boatPos.y=lerp(fromY,toY,k*k);
+      if(k>=1){ boatFallAnim=null; boatPos.x=x; boatPos.y=toY; if(splash)splashAt(x,waterY); boatMode=mode; } };
+  }
+  function landThenRoll(x,fromY){
+    const surf=surfY(x)-18;
+    if(fromY>=surf-2){ rockX=x; rockVX=0; rockState="roll"; return; }
+    rockState="fall";
+    const t0=now(), dur=Math.max(160,(surf-fromY)*1.05);
+    fallAnim=function(t){ const k=clamp((t-t0)/dur,0,1); rockPos.x=x; rockPos.y=lerp(fromY,surf,k*k); if(k>=1){ fallAnim=null; rockX=x; rockVX=0; rockState="roll"; } };
+  }
+
+  function enter(){ entered=true; }
+
+  function attachDrag(){
+    function pt(ev){const r=stage.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    rock.addEventListener("pointerdown",function(ev){ if(rockSunk)return; ev.preventDefault(); rock.classList.add("dragging"); rock.setPointerCapture(ev.pointerId); rockState="idle"; rockVX=0; fallAnim=null; const p=pt(ev); rockDrag={dx:rockPos.x-p.x,dy:rockPos.y-p.y}; });
+    rock.addEventListener("pointermove",function(ev){ if(!rockDrag)return; const p=pt(ev); rockPos.x=p.x+rockDrag.dx; rockPos.y=p.y+rockDrag.dy; rockPos.rot=0; });
+    function rockUp(ev){ if(!rockDrag)return; rockDrag=null; rock.classList.remove("dragging"); try{rock.releasePointerCapture(ev.pointerId)}catch(e){} const x=clamp(rockPos.x,0,W); if(x>=groundEndX || rockPos.y>waterY || rockPos.y>surfY(x)+10){ sinkFrom(x,rockPos.y); } else { landThenRoll(x,rockPos.y); } }
+    rock.addEventListener("pointerup",rockUp); rock.addEventListener("pointercancel",rockUp);
+    boat.addEventListener("pointerdown",function(ev){ ev.preventDefault(); boat.classList.add("dragging"); boat.setPointerCapture(ev.pointerId); boatFallAnim=null; boatMode="drag"; const p=pt(ev); boatDrag={dx:boatPos.x-p.x,dy:boatPos.y-p.y}; });
+    boat.addEventListener("pointermove",function(ev){ if(!boatDrag)return; const p=pt(ev); boatPos.x=p.x+boatDrag.dx; boatPos.y=p.y+boatDrag.dy; });
+    function boatUp(ev){ if(!boatDrag)return; boatDrag=null; boat.classList.remove("dragging"); try{boat.releasePointerCapture(ev.pointerId)}catch(e){}
+      const x=clamp(boatPos.x,0,W), surf=surfY(x);
+      if(x < groundEndX && boatPos.y < surf){ boatFall(x,boatPos.y, surf-16, "land", false); }
+      else if(boatPos.y < waterY){ boatFall(x,boatPos.y, waterY+10, "water", true); }
+      else { boatMode="water"; } }
+    boat.addEventListener("pointerup",boatUp); boat.addEventListener("pointercancel",boatUp);
+  }
+
+  function layoutObjects(t){
+    let bx=boatPos.x,by=boatPos.y,brot=0;
+    if(boatMode==="water"){ by=boatPos.y+Math.sin(t*0.0026+bx*0.01)*4; brot=Math.sin(t*0.0026+bx*0.01+0.6)*4; }
+    setXY(boat,bx,by,brot);
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+  }
+  function tick(t){
+    const dt = lastT? clamp((t-lastT)/16.667,0.4,2.4):1; lastT=t;
+    drawWater(t); drawWind(t); layoutWaterline(t);
+    if(rockState==="roll") physicsStep(dt);
+    if(fallAnim) fallAnim(t);
+    if(boatFallAnim) boatFallAnim(t);
+    if(boatMode==="water" && !boatDrag){ boatPos.x += DRIFT*dt; if(boatPos.x>W+50) boatPos.x=-50; }
+    layoutObjects(t);
+  }
+  return {build,enter,tick,sec,stage};
+}
+
+/* ============================================================= SCENE 3 */
+function Scene3(){
+  const sec=document.getElementById("s3");
+  const svg=document.getElementById("art3");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  const stage=sec.querySelector(".stage");
+  let W,H,groundY,entered=false,lastT=0;
+  let groundPath, groundHit;
+  let cps=[];          // draggable ground control points {x,y}
+  let terrain=[];      // dense samples [[x,y]]
+  const R=20;          // boulder radius
+  const ROWH=R*1.732;  // nested-row height
+  let bodies=[];
+  let timers=[];
+  let drag=null;
+  let hintEl, hintShown=false, hintGone=false, roller=null;
+  const G=0.5;
+  const easeIn=k=>k*k;
+
+  /* ---- ground ---- */
+  function buildCPs(){
+    cps=[];
+    const n=20;
+    for(let i=0;i<=n;i++){ cps.push({x:W*i/n, y:groundY}); }   // perfectly flat to start
+  }
+  function buildTerrain(){
+    const P=cps.map(c=>[c.x,c.y]); const s=[];
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1],N=16;
+      for(let k=0;k<N;k++){const t=k/N,t2=t*t,t3=t2*t;
+        const x=0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3);
+        const y=0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3);
+        s.push([x,y]);}
+    }
+    s.push([P[P.length-1][0],P[P.length-1][1]]);
+    terrain=s;
+  }
+  function surfY(x){
+    const s=terrain; if(!s.length)return groundY;
+    if(x<=s[0][0])return s[0][1];
+    if(x>=s[s.length-1][0])return s[s.length-1][1];
+    let lo=0,hi=s.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1; if(s[m][0]<x)lo=m; else hi=m;}
+    const t=(x-s[lo][0])/((s[hi][0]-s[lo][0])||1);
+    return lerp(s[lo][1],s[hi][1],t);
+  }
+  function slopeAt(x){ return (surfY(x+3)-surfY(x-3))/6; }
+
+  /* ---- bodies ---- */
+  function addRock(x,y){
+    const g=el("g",{class:"grab"});
+    const c=el("circle",{cx:0,cy:0,r:R,fill:SOFT});
+    const mark=el("path",{d:`M ${(-R*0.55).toFixed(1)} 0 A ${(R*0.55).toFixed(1)} ${(R*0.55).toFixed(1)} 0 0 1 ${(R*0.55).toFixed(1)} 0`,fill:"none",stroke:"rgba(20,20,15,0.16)","stroke-width":1.4,"stroke-linecap":"round"});
+    g.append(c,mark); svg.append(g);
+    const b={kind:"rock",x,y,vx:0,vy:0,rot:0,vrot:0,r:R,mass:1,node:g,
+             held:false,sleeping:false,supported:false,place:null,still:0,wakeUntil:0,
+             restG:0.14,restB:0.14,fr:0.999};
+    bodies.push(b); return b;
+  }
+  function addBoat(x,y){
+    const g=makeBoat(0.85); g.classList.add("grab"); svg.append(g);
+    const b={kind:"boat",x,y,vx:0,vy:0,rot:0,vrot:0,r:20,mass:0.8,node:g,
+             held:false,sleeping:false,supported:false,place:null,still:0,wakeUntil:0,
+             restG:0.24,restB:0.08,fr:0.72};
+    bodies.push(b); return b;
+  }
+  function wake(b,grace){ if(!b.place){ b.sleeping=false; b.still=0; b.wakeUntil=now()+(grace||650); } }
+
+  /* ---- physics ---- */
+  function groundCollide(b){
+    const gy=surfY(b.x);
+    const pen=(b.y+b.r)-gy;
+    if(pen<=0)return;
+    const sl=slopeAt(b.x), nl=Math.hypot(sl,1);
+    const nx=sl/nl, ny=-1/nl;
+    b.y-=pen; b.supported=true;
+    let vn=b.vx*nx+b.vy*ny;
+    const tx=-ny, ty=nx; let vt=b.vx*tx+b.vy*ty;
+    vn = vn<0 ? -vn*b.restG : 0;
+    vt*=b.fr;                                   // kinetic friction (light while fast, so it can roll in)
+    // rolling resistance that ramps up as it slows -> a smooth, gradual stop (no hard snap)
+    const av=Math.abs(vt);
+    if(av<2.2){ const dec=(1-av/2.2)*0.025; vt = av<=dec ? 0 : vt-Math.sign(vt)*dec; }
+    b.vx=vn*nx+vt*tx; b.vy=vn*ny+vt*ty;
+    b.vrot=-vt/b.r*57.3*0.5;
+  }
+  function collidePair(a,b){
+    if(a.place||b.place)return;
+    if(a.sleeping && b.sleeping) return;
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy); const min=a.r+b.r;
+    if(d>=min)return;
+    if(d<0.001){ dx=(Math.random()-0.5); dy=-1; d=Math.hypot(dx,dy); }
+    const nx=dx/d, ny=dy/d, overlap=min-d;
+    // a frozen (sleeping) body is an immovable wall: the mover bounces off it and the pile stays intact as one piece
+    if(a.sleeping || b.sleeping){
+      const mover=a.sleeping?b:a, wall=a.sleeping?a:b;
+      // resolve the mover against the frozen pile as if it were an immovable wall (this is what makes it rebound)
+      const mnx=(mover===b)?nx:-nx, mny=(mover===b)?ny:-ny;
+      mover.x+=mnx*overlap; mover.y+=mny*overlap;
+      let vn=mover.vx*mnx+mover.vy*mny;
+      // the frozen stack does not move at all - only the mover reacts, so the triangle stays exactly put
+      if(vn<0){ mover.vx-=(1+mover.restB)*vn*mnx; mover.vy-=(1+mover.restB)*vn*mny; }
+      const tx=-mny, ty=mnx; let vt=(mover.vx*tx+mover.vy*ty)*0.34;
+      vn=mover.vx*mnx+mover.vy*mny;
+      mover.vx=vn*mnx+vt*tx; mover.vy=vn*mny+vt*ty;
+      mover.vrot=-vt/mover.r*57.3*0.5;
+      if(wall.y>mover.y) mover.supported=true;
+      return;
+    }
+    const ima=a.held?0:1/a.mass, imb=b.held?0:1/b.mass, ims=ima+imb;
+    if(ims===0)return;
+    a.x-=nx*overlap*(ima/ims); a.y-=ny*overlap*(ima/ims);
+    b.x+=nx*overlap*(imb/ims); b.y+=ny*overlap*(imb/ims);
+    (a.y<b.y?a:b).supported=true;
+    const rvx=b.vx-a.vx, rvy=b.vy-a.vy, vn=rvx*nx+rvy*ny;
+    if(vn<0){
+      const e=Math.max(a.restB,b.restB);
+      const jn=-(1+e)*vn/ims;
+      a.vx-=jn*nx*ima; a.vy-=jn*ny*ima; b.vx+=jn*nx*imb; b.vy+=jn*ny*imb;
+      const tx=-ny, ty=nx; let vt=(b.vx-a.vx)*tx+(b.vy-a.vy)*ty;
+      const jt=-vt/ims*0.5;
+      a.vx-=jt*tx*ima; a.vy-=jt*ty*ima; b.vx+=jt*tx*imb; b.vy+=jt*ty*imb;
+    }
+  }
+  function stepPhysics(dt){
+    const sub=2, h=dt/sub;
+    for(let s=0;s<sub;s++){
+      for(const b of bodies){
+        if(b.held||b.sleeping||b.place)continue;
+        b.supported=false;
+        b.vy+=G*h;
+        b.vx=clamp(b.vx,-30,30); b.vy=clamp(b.vy,-36,36);
+        b.x+=b.vx*h; b.y+=b.vy*h; b.rot+=b.vrot*h;
+      }
+      for(const b of bodies){
+        if(b.held||b.sleeping||b.place)continue;
+        groundCollide(b);
+        if(b.x<-50){b.x=-50;b.vx=Math.abs(b.vx)*0.4;}
+        if(b.x>W+50){b.x=W+50;b.vx=-Math.abs(b.vx)*0.4;}
+      }
+      for(let it=0;it<4;it++)
+        for(let i=0;i<bodies.length;i++)
+          for(let j=i+1;j<bodies.length;j++)
+            collidePair(bodies[i],bodies[j]);
+    }
+    for(const b of bodies){
+      if(b.held||b.sleeping||b.place)continue;
+      if(Math.hypot(b.vx,b.vy)<0.35 && b.supported && now()>b.wakeUntil && Math.abs(slopeAt(b.x))<0.06){ if(++b.still>18){ b.sleeping=true; b.vx=b.vy=b.vrot=0; } }
+      else b.still=0;
+    }
+  }
+
+  /* ---- draw ---- */
+  function drawGround(){
+    if(!terrain.length)return;
+    let d="M"+terrain[0][0].toFixed(1)+" "+terrain[0][1].toFixed(1);
+    for(let i=1;i<terrain.length;i++) d+="L"+terrain[i][0].toFixed(1)+" "+terrain[i][1].toFixed(1);
+    groundPath.setAttribute("d",d);
+    if(groundHit) groundHit.setAttribute("d",d);
+  }
+  function drawTex(t){
+    ctx.clearRect(0,0,W,H);
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let x=0;x<W;x+=11){ const gy=surfY(x);
+      for(let r=0;r<5;r++){ const y=gy+9+r*13; if(y>H)break;
+        const p=Math.sin(x*0.03+r*0.9+t*0.0005);
+        let ch = p>0.78?"·":(p<-0.86?"˙":null); if(!ch)continue;
+        ctx.fillStyle="rgba(107,101,85,"+((1-r/5)*0.15).toFixed(3)+")"; ctx.fillText(ch,x,y); } }
+  }
+  function render(){ for(const b of bodies) setXY(b.node,b.x,b.y,b.rot); }
+
+  /* ---- build / enter ---- */
+  function build(){
+    W=stage.clientWidth;H=stage.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    timers.forEach(clearTimeout); timers=[];
+    groundY=H*0.66;
+    buildCPs(); buildTerrain();
+    groundPath=el("path",{fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round","stroke-linecap":"round"});
+    svg.append(groundPath);
+    // a wide, invisible stroke over the ground line so it can be grabbed on touch as well
+    // as with a mouse; .grab lets the touchstart handler hold the page still while it drags
+    groundHit=el("path",{"class":"grab",fill:"none",stroke:"transparent","stroke-width":44,"stroke-linecap":"round","stroke-linejoin":"round","pointer-events":"stroke"});
+    svg.append(groundHit); drawGround();
+    bodies=[]; lastT=0;
+    hintEl=sec.querySelector(".movehint"); hintShown=false; roller=null;
+    if(hintEl && !hintGone) hintEl.classList.remove("on");
+    attachDrag();
+    if(entered) runSequence();
+  }
+  function triTargets(){
+    const cx=W*0.6, B=surfY(cx)-R;
+    return [
+      {x:cx-2*R,y:B},{x:cx,y:B},{x:cx+2*R,y:B},   // base
+      {x:cx-R,y:B-ROWH},{x:cx+R,y:B-ROWH},         // middle
+      {x:cx,y:B-2*ROWH}                            // top
+    ];
+  }
+  function runSequence(){
+    const tg=triTargets();
+    // the whole triangle is already loaded and frozen in place (no drop-in), boat crowning the apex
+    for(let i=0;i<5;i++){ const p=tg[i];
+      const b=addRock(p.x,p.y);
+      b.mass=14; b.sleeping=true;                 // heavy + frozen: sits still until struck
+    }
+    const apex=tg[5];
+    const bt=addBoat(apex.x, apex.y-3); bt.sleeping=true;
+    // then a boulder rolls in, bumps the stack, and bounces back
+    timers.push(setTimeout(()=>{ const rx=-40; const r=addRock(rx,surfY(rx)-R); r.vx=5.8; r.fr=0.999; r.restB=0.24; roller=r; }, 1300));
+    // once it has rolled past and rebounded, invite dragging the ground (fallback timer in
+    // case the rebound is too gentle for the detection below to catch)
+    timers.push(setTimeout(showHint, 5200));
+  }
+  function showHint(){
+    if(hintShown||hintGone||!hintEl)return;
+    hintShown=true;
+    const hx=W*0.28, hy=surfY(hx);
+    hintEl.style.left=hx.toFixed(0)+"px";
+    hintEl.style.top=(hy-26).toFixed(0)+"px";
+    hintEl.classList.add("on");
+  }
+  function enter(){ if(entered)return; entered=true; runSequence(); }
+
+  /* ---- interaction ---- */
+  function attachDrag(){
+    function lp(ev){const r=stage.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    stage.addEventListener("pointerdown",function(ev){
+      const p=lp(ev);
+      for(let i=bodies.length-1;i>=0;i--){ const b=bodies[i];
+        if(b.place)continue;
+        if(Math.hypot(p.x-b.x,p.y-b.y)<=b.r+6){
+          ev.preventDefault(); try{stage.setPointerCapture(ev.pointerId)}catch(e){}
+          b.held=true; b.sleeping=false; b.still=0; b.vx=0; b.vy=0; b.vrot=0;
+          drag={type:"body",b,dx:b.x-p.x,dy:b.y-p.y,vx:0,vy:0,ox:b.x,oy:b.y};
+          for(const o of bodies){ if(o!==b && !o.place && Math.abs(o.x-b.x)<2.4*R && o.y<b.y-2) wake(o); }
+          bodies.splice(i,1); bodies.push(b); svg.append(b.node);
+          return;
+        } }
+      // grab the ground when the press lands on the line itself. The wide invisible
+      // groundHit band (class .grab) makes this reachable on touch and, via the global
+      // touchstart handler, keeps the page from scrolling while the line is dragged.
+      const gTol = ev.pointerType==='touch' ? 22 : 14;
+      if(Math.abs(p.y-surfY(p.x))<gTol){
+        let xi=0,bx=1e9;
+        for(let i=0;i<cps.length;i++){ const d=Math.abs(p.x-cps[i].x); if(d<bx){bx=d;xi=i;} }
+        ev.preventDefault(); try{stage.setPointerCapture(ev.pointerId)}catch(e){}
+        hintGone=true; if(hintEl) hintEl.classList.remove("on");
+        drag={type:"ground",ci:xi,baseY:cps.map(c=>c.y)};
+      }
+    });
+    stage.addEventListener("pointermove",function(ev){
+      if(!drag)return; const p=lp(ev);
+      if(drag.type==="body"){ const b=drag.b, nx=p.x+drag.dx, ny=p.y+drag.dy;
+        drag.vx=nx-b.x; drag.vy=ny-b.y; b.x=nx; b.y=ny; b.rot=0;
+        for(const o of bodies){ if(o!==b && !o.place && Math.abs(o.x-drag.ox)<2.4*R && o.y<drag.oy-2) wake(o); }
+      } else {
+        // raise/lower a rounded, symmetric hill around the grabbed point: the drag delta
+        // is spread to neighbouring control points with a smooth cosine falloff, and every
+        // point keeps its even x spacing, so the hill stays symmetrical rather than a peak.
+        const ci=drag.ci, base=drag.baseY, R=3;
+        const targetY=clamp(p.y,H*0.20,H*0.92), delta=targetY-base[ci];
+        for(let k=-R;k<=R;k++){ const j=ci+k; if(j<0||j>=cps.length)continue;
+          const w=0.5*(1+Math.cos(Math.PI*Math.abs(k)/(R+1)));
+          cps[j].y=clamp(base[j]+delta*w, H*0.20, H*0.92);
+        }
+        buildTerrain(); drawGround();
+        for(const b of bodies) wake(b);   // let the boulders respond to the new terrain
+      }
+    });
+    function up(ev){ if(!drag)return;
+      if(drag.type==="body"){ const b=drag.b; b.held=false; b.sleeping=false; b.still=0; b.vx=clamp(drag.vx,-30,30); b.vy=clamp(drag.vy,-34,34); }
+      drag=null; try{stage.releasePointerCapture(ev.pointerId)}catch(e){}
+    }
+    stage.addEventListener("pointerup",up); stage.addEventListener("pointercancel",up);
+  }
+
+  function tick(t){
+    const dt=lastT?clamp((t-lastT)/16.667,0.4,2.2):1; lastT=t;
+    drawTex(t);
+    // scripted placements (boulders + boat entrance)
+    for(const b of bodies){ if(!b.place)continue; const pl=b.place;
+      const k=clamp((t-pl.t0)/pl.dur,0,1);
+      if(k<=0){ b.x=pl.x; b.y=pl.fromY; }
+      else { b.x=pl.x; b.y=lerp(pl.fromY,pl.toY, pl.ease==="io"?easeInOut(k):easeIn(k)); }
+      if(k>=1){ b.place=null; b.sleeping=true; b.vx=b.vy=0; }
+    }
+    stepPhysics(dt);
+    if(roller && !hintShown && !hintGone){
+      if(roller.x>W*0.2) roller.reached=true;                       // rolled in toward the stack
+      if(roller.reached){ roller.maxX=Math.max(roller.maxX||roller.x, roller.x);
+        if(roller.x < roller.maxX-6) showHint(); }                  // then rebounded back
+    }
+    render();
+  }
+  return {build,enter,tick,sec,stage};
+}
+
+/* ---------- driver ---------- */
+const scenes=[Scene1(),Scene2(),Scene3()];
+const active=new Set();
+function buildAll(){ scenes.forEach(s=>s.build()); }
+buildAll();
+addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(buildAll,180); });
+
+const io=new IntersectionObserver((ents)=>{
+  ents.forEach(e=>{
+    const s=scenes.find(sc=>sc.stage===e.target);
+    if(!s) return;
+    if(e.isIntersecting){ active.add(s); if(e.intersectionRatio>0.35) s.enter(); }
+    else active.delete(s);
+  });
+},{threshold:[0,0.35,0.6]});
+scenes.forEach(s=>io.observe(s.stage));
+
+// On touch: pressing a draggable object drags it (and must not scroll the page); pressing anywhere else scrolls.
+// touch-action has no effect on inner SVG elements, so gate the page scroll here based on what was pressed.
+document.addEventListener("touchstart", function(ev){
+  const t=ev.touches && ev.touches[0]; if(!t) return;
+  const el=document.elementFromPoint(t.clientX, t.clientY);
+  if(el && el.closest && el.closest(".grab")) ev.preventDefault();
+}, {passive:false});
+
+let last=now();
+function loop(t){
+  active.forEach(s=>s.tick(t));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+<script>
+
+(function(){
+  const PAGES = [{"label": "Stories", "url": "stories.html"}, {"label": "Dabblers", "url": "dabblers.html"}, {"label": "Our Team", "url": "our-team.html"}, {"label": "About", "url": "about.html"}, {"label": "Contact", "url": "contact.html"}], HERE = "About", LOGO = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTk0Mi4yLDU0OS43Yy0xMjAuMDUsMC0yMTcuODMsOTYuOTktMjE3LjgzLDIxNy4wMywwLDY5LjQ3LDMyLjc1LDEzMS40OSw4My42MSwxNzEuNDEsMTguMDgtMTUuODMsNDAuNTMtMjUuODgsNjQuMTktMjguNzctNTIuNTktMjYuMDEtODguOTctODAuMjgtODguOTctMTQyLjY0LDAtODcuNDUsNzEuNTUtMTU4LjIsMTU5LTE1OC4yczE1OC4yLDcwLjc1LDE1OC4yLDE1OC4yLTY3LjQ3LDE1NS42My0xNTIuMDcsMTU4Ljg4YzIwLjQzLDEyLjE3LDM2LjgzLDMwLjUxLDQ2LjkyLDUyLjM4LDQwLjc2LTEwLjI2LDc3LjExLTMyLjA3LDEwNS4xNS02MS44djY0LjRoNTguODN2LTIxMy44NmMwLTEyMC4wNC05Ni45OS0yMTcuMDMtMjE3LjAzLTIxNy4wM1oiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNMTEwMC40LDEwMTYuMTFoNTguOHYyNzQuNTZjMCw4Ny42MSw3MC43NSwxNTguMzYsMTU4LjM2LDE1OS4wNnY1OC44Yy0xMjAuMTgsMC0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzQuMzJaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTE1MDUuOTcsMTQ0Ni42OWMxMC4zMSwxLjY0LDIwLjYyLDMuMjgsMzAuOTIsMy4yOCw3Ny4zMSwwLDE0MS43My01NS43NSwxNTYuMDItMTI5Ljc4aDU5Ljc0Yy0xNC4yOSwxMDYuNTktMTA1Ljg5LDE4OC41OC0yMTUuNzYsMTg4LjU4LTEyMC4xOCwwLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xczk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjOTIuMywwLDE3MS45NSw1Ny4zOSwyMDIuODcsMTM5LjM5bC0yMzMuNzksMjMzLjc5Wk0xNDQ3Ljg4LDE0MjEuODZsMjIwLjQ0LTIyMC40NGMtMjguNTgtNDEuNDYtNzcuMzEtNjkuMzQtMTMxLjQyLTY5LjM0LTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzYsMCw1NS4wNSwyNy44OCwxMDIuODQsNzAuMDQsMTMxLjQyWiIvPgo8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik02ODIuNjEsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2NS40NSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTEyMDAuOCw0OTEuMjNoNTguOHYxMjYuNWMzOS44Mi00Mi4xNyw5Ni4yOC02OC40LDE1OC4zNi02OC40LDEyMC44OCwwLDIxOC4xLDk2Ljk4LDIxOC4xLDIxNy4xNnMtOTYuOTgsMjE4LjEtMjE4LjEsMjE4LjEtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc1LjI2aDBaTTEyNTkuNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNOTY5LjM2LDExMTQuMjZjLTMuMjYtMi4zNi02LjU5LTQuNjItOS45OS02Ljc5LDAtLjAxLS4wMS0uMDEtLjAxLS4wMS0uMDguMDctLjE2LjE1LS4yNS4yMi0zLjA3LDIuOC02LjMxLDUuNDItOS43LDcuODQtMTEuNzIsOC40LTI1LjE3LDE0LjQ3LTM5LjY5LDE3LjU5LS42My4xNS0xLjI3LjI4LTEuOTEuNC0uMzUuMDYtLjcuMTMtMS4wNS4yLS42Ni4xMy0xLjM0LjI1LTIuMDEuMzYtLjgzLjE0LTEuNjUuMjctMi40OC4zOS0uODEuMTEtMS42My4yMi0yLjQ0LjMyLS42NS4wOC0xLjI5LjE1LTEuOTQuMjEtMS4yNC4xNC0yLjQ5LjI0LTMuNzQuMzItLjcyLjA2LTEuNDQuMS0yLjE3LjEzLS42Ny4wNC0xLjM0LjA2LTIuMDEuMDgtLjE0LjAxLS4yOC4wMS0uNDEuMDEtLjE4LjAxLS4zNy4wMS0uNTYuMDEtLjc1LjAyLTEuNS4wMy0yLjI2LjAzLTIuNTgsMC01LjEzLS4wOS03LjY2LS4yNy0xLjI3LS4wOS0yLjUzLS4yLTMuNzgtLjMzLS41LS4wNS0uOTktLjEtMS40OS0uMTctMS40OS0uMTgtMi45Ny0uMzktNC40NC0uNjItMjkuMzUtNC43Ny01NC42NS0yMS40Mi03MS4wMy00NC43MS0yLjEtMi45OC00LjA0LTYuMDYtNS44NC05LjI1LS4yNi0uNDUtLjUxLS45MS0uNzUtMS4zNy0uMDQtLjA3LS4wOC0uMTQtLjEyLS4yMS0uMDQuMDEtLjA3LjAyLS4xMS4wMy0zLjkzLjkxLTcuODIsMS45NC0xMS42NywzLjA3LTM3LjQxLDExLTcwLjg0LDMxLjg5LTk3LjE1LDU5LjY4di0xMjYuNWgtNTguOHYyNzUuMjZjMCwxMjAuMTgsOTYuOTgsMjE4LjEsMjE3LjE2LDIxOC4xczIxOC4xLTk3LjkyLDIxOC4xLTIxOC4xYzAtNzIuNS0zNS4yNC0xMzYuNjUtODkuOC0xNzUuOTJaTTg0MS4yOSwxNDQ5LjI1Yy04Ny42MSwwLTE1OC4zNi03MS42OS0xNTguMzYtMTU5LjA3czcwLjc1LTE1OC4zNiwxNTguMzYtMTU4LjM2LDE1OS4wNyw3MC43NSwxNTkuMDcsMTU4LjM2LTcwLjc1LDE1OS4wNy0xNTkuMDcsMTU5LjA3WiIvPgo8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik03OTEuNjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0LjI3LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGQ9Ik05NDIuODcsNTQ5LjdjLTEyMC4wNSwwLTIxNy44Myw5Ni45OS0yMTcuODMsMjE3LjAzLDAsNjkuNDcsMzIuNzUsMTMxLjQ5LDgzLjYxLDE3MS40MSwxOC4wOC0xNS44Myw0MC41My0yNS44OCw2NC4xOS0yOC43Ny01Mi41OS0yNi4wMS04OC45Ny04MC4yOC04OC45Ny0xNDIuNjQsMC04Ny40NSw3MS41NS0xNTguMiwxNTktMTU4LjJzMTU4LjIsNzAuNzUsMTU4LjIsMTU4LjItNjcuNDcsMTU1LjYzLTE1Mi4wNywxNTguODhjMjAuNDMsMTIuMTcsMzYuODMsMzAuNTEsNDYuOTIsNTIuMzgsNDAuNzYtMTAuMjYsNzcuMTEtMzIuMDcsMTA1LjE1LTYxLjh2NjQuNGg1OC44M3YtMjEzLjg2YzAtMTIwLjA0LTk2Ljk5LTIxNy4wMy0yMTcuMDMtMjE3LjAzWiIvPgo8cGF0aCBkPSJNMTEwMS4wNiwxMDE2LjExaDU4Ljh2Mjc0LjU2YzAsODcuNjEsNzAuNzUsMTU4LjM2LDE1OC4zNiwxNTkuMDZ2NTguOGMtMTIwLjE4LDAtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc0LjMyWiIvPgo8cGF0aCBkPSJNMTUwNS4zMSwxNDQ2LjY5YzEwLjMxLDEuNjQsMjAuNjIsMy4yOCwzMC45MiwzLjI4LDc3LjMxLDAsMTQxLjczLTU1Ljc1LDE1Ni4wMi0xMjkuNzhoNTkuNzRjLTE0LjI5LDEwNi41OS0xMDUuODksMTg4LjU4LTIxNS43NiwxODguNTgtMTIwLjE4LDAtMjE4LjEtOTcuOTItMjE4LjEtMjE4LjFzOTcuOTItMjE3LjE2LDIxOC4xLTIxNy4xNmM5Mi4zLDAsMTcxLjk1LDU3LjM5LDIwMi44NywxMzkuMzlsLTIzMy43OSwyMzMuNzlaTTE0NDcuMjEsMTQyMS44NmwyMjAuNDQtMjIwLjQ0Yy0yOC41OC00MS40Ni03Ny4zMS02OS4zNC0xMzEuNDItNjkuMzQtODcuNjEsMC0xNTkuMDYsNzAuNzUtMTU5LjA2LDE1OC4zNiwwLDU1LjA1LDI3Ljg4LDEwMi44NCw3MC4wNCwxMzEuNDJaIi8+CjxwYXRoIGQ9Ik02ODMuMjcsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2Ni4xMSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGQ9Ik0xMjAxLjQ2LDQ5MS4yM2g1OC44djEyNi41YzM5LjgyLTQyLjE3LDk2LjI4LTY4LjQsMTU4LjM2LTY4LjQsMTIwLjg4LDAsMjE4LjEsOTYuOTgsMjE4LjEsMjE3LjE2cy05Ni45OCwyMTguMS0yMTguMSwyMTguMS0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzUuMjZoMFpNMTI2MC4yNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggZD0iTTk3MC4wMywxMTE0LjI2Yy0zLjI2LTIuMzYtNi41OS00LjYyLTkuOTktNi43OSwwLS4wMS0uMDEtLjAxLS4wMS0uMDEtLjA4LjA3LS4xNi4xNS0uMjUuMjItMy4wNywyLjgtNi4zMSw1LjQyLTkuNyw3Ljg0LTExLjcyLDguNC0yNS4xNywxNC40Ny0zOS42OSwxNy41OS0uNjMuMTUtMS4yNy4yOC0xLjkxLjQtLjM1LjA2LS43LjEzLTEuMDUuMi0uNjYuMTMtMS4zNC4yNS0yLjAxLjM2LS44My4xNC0xLjY1LjI3LTIuNDguMzktLjgxLjExLTEuNjMuMjItMi40NC4zMi0uNjUuMDgtMS4yOS4xNS0xLjk0LjIxLTEuMjQuMTQtMi40OS4yNC0zLjc0LjMyLS43Mi4wNi0xLjQ0LjEtMi4xNy4xMy0uNjcuMDQtMS4zNC4wNi0yLjAxLjA4LS4xNC4wMS0uMjguMDEtLjQxLjAxLS4xOC4wMS0uMzcuMDEtLjU2LjAxLS43NS4wMi0xLjUuMDMtMi4yNi4wMy0yLjU4LDAtNS4xMy0uMDktNy42Ni0uMjctMS4yNy0uMDktMi41My0uMi0zLjc4LS4zMy0uNS0uMDUtLjk5LS4xLTEuNDktLjE3LTEuNDktLjE4LTIuOTctLjM5LTQuNDQtLjYyLTI5LjM1LTQuNzctNTQuNjUtMjEuNDItNzEuMDMtNDQuNzEtMi4xLTIuOTgtNC4wNC02LjA2LTUuODQtOS4yNS0uMjYtLjQ1LS41MS0uOTEtLjc1LTEuMzctLjA0LS4wNy0uMDgtLjE0LS4xMi0uMjEtLjA0LjAxLS4wNy4wMi0uMTEuMDMtMy45My45MS03LjgyLDEuOTQtMTEuNjcsMy4wNy0zNy40MSwxMS03MC44NCwzMS44OS05Ny4xNSw1OS42OHYtMTI2LjVoLTU4Ljh2Mjc1LjI2YzAsMTIwLjE4LDk2Ljk4LDIxOC4xLDIxNy4xNiwyMTguMXMyMTguMS05Ny45MiwyMTguMS0yMTguMWMwLTcyLjUtMzUuMjQtMTM2LjY1LTg5LjgtMTc1LjkyWk04NDEuOTYsMTQ0OS4yNWMtODcuNjEsMC0xNTguMzYtNzEuNjktMTU4LjM2LTE1OS4wN3M3MC43NS0xNTguMzYsMTU4LjM2LTE1OC4zNiwxNTkuMDcsNzAuNzUsMTU5LjA3LDE1OC4zNi03MC43NSwxNTkuMDctMTU5LjA3LDE1OS4wN1oiLz4KPHBhdGggY2xhc3M9ImNscy0yIiBkPSJNNzkyLjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0Ljk0LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg=="}, ICON = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiBub25lOwogICAgICAgIHN0cm9rZTogI2ZmZjsKICAgICAgICBzdHJva2Utd2lkdGg6IDEwcHg7CiAgICAgIH0KCiAgICAgIC5jbHMtMiB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMSIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik01OC40MSwzMi44N2MtMy4yOCwwLTYuMjcsMS44OC02LjI3LDUuNjRzMi45OSw1LjcyLDYuMjcsNS43Miw2LjI3LTEuODksNi4yNy01LjcyLTIuOTktNS42NC02LjI3LTUuNjRaIi8+CiAgICA8cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iNjggNzMgNjggODIgNTIuODMgODIgNTIuODMgNDguMzQgNjMuOTkgNDguMzQgNjMuOTkgNzMgNjggNzMiLz4KICA8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgICAgc3Ryb2tlOiAjMDAwOwogICAgICAgIHN0cm9rZS13aWR0aDogMTBweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMiIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBkPSJNNTguNDEsMzIuODdjLTMuMjgsMC02LjI3LDEuODgtNi4yNyw1LjY0czIuOTksNS43Miw2LjI3LDUuNzIsNi4yNy0xLjg5LDYuMjctNS43Mi0yLjk5LTUuNjQtNi4yNy01LjY0WiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI2OCA3MyA2OCA4MiA1Mi44MyA4MiA1Mi44MyA0OC4zNCA2My45OSA0OC4zNCA2My45OSA3MyA2OCA3MyIvPgogIDwvZz4KPC9zdmc+"};
+  const $ = id => document.getElementById(id);
+  const dawn=$('dawn'), glow=$('glow'), grain=$('grain'), paper=$('paper'),
+        under=$('under'), underList=$('underList'), limbGlow=$('limbGlow'),
+        fold=$('fold'), limb=$('limb'), dog=$('dog'), logo=$('logo'), sheet=$('sheet');
+  [dawn,glow,grain,paper,under,limbGlow,fold,limb,dog,logo]
+    .forEach(el=>document.body.appendChild(el));
+
+  dog.innerHTML = '<img src="'+ICON.black+'" alt="">';
+  logo.innerHTML = '<img class="spacer" src="'+LOGO.white+'" alt="Dabble">'
+                 + '<img class="w" src="'+LOGO.white+'" alt="">'
+                 + '<img class="b" src="'+LOGO.black+'" alt="">';
+  const logoW=logo.querySelector('.w'), logoB=logo.querySelector('.b');
+
+  /* The hero supplies dt, ease and a frame list from its HERO object. There is no bloom
+     here, so stand those three up alone - same shape, same time-based easing, so the peel
+     behaves identically at any refresh rate. */
+  const LIFT={dt:1,frame:[],ease:k=>1-Math.pow(1-k,LIFT.dt)};
+  let _last=performance.now();
+  function tick(now){
+    const t=now||performance.now();
+    LIFT.dt=Math.min(Math.max(t-_last,4),50)/16.667; _last=t;
+    LIFT.frame.forEach(f=>f());
+    requestAnimationFrame(tick);
+  }
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const SQ2=Math.SQRT2;
+  let SPAN=0, SKYH=0, SUNR=0, WASHR=0, LIMBL=0, GLOWL=0;
+
+const ramp=(keys,n)=>{
+  const px=c=>c[0]==='#'? [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16),1]
+                        : c.match(/[\d.]+/g).map(Number);
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    let k=0; while(k<keys.length-2 && keys[k+1][0]<t) k++;
+    const [t0,c0]=keys[k], [t1,c1]=keys[k+1];
+    let u=(t-t0)/(t1-t0); u=Math.min(1,Math.max(0,u));
+    const e=u*u*(3-2*u);
+    const a=px(c0), b=px(c1);
+    const v=[0,1,2].map(j=>Math.round(a[j]+(b[j]-a[j])*e));
+    const a3=(a[3]===undefined?1:a[3]), b3=(b[3]===undefined?1:b[3]);
+    const al=a3+(b3-a3)*e;
+    out.push([t,`rgba(${v[0]},${v[1]},${v[2]},${al.toFixed(3)})`]);
+  }
+  return out;
+};
+const taper=(centre,half,rgbMid,rgbEnd,peak,n,rgbCore,coreW)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const u=i/n;                       // -1..1 across the segment
+    const x=-1+2*u;
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    const m=1-Math.abs(x);
+    let c=[0,1,2].map(j=>Math.round(rgbEnd[j]+(rgbMid[j]-rgbEnd[j])*m));
+    if(rgbCore){                       // a glint of the sun's own edge, dead centre
+      const t=Math.max(0,1-Math.abs(x)/coreW), g=t*t*(3-2*t);
+      c=c.map((v,j)=>Math.round(v+(rgbCore[j]-v)*g));
+    }
+    const pos=(centre+half*x)*100;
+    out.push(`rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)}) ${pos.toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(255,120,0,0) 0%,${out.join(',')},rgba(255,120,0,0) 100%)`;
+};
+const taperMask=(centre,half,peak,n)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const x=-1+2*(i/n);
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    out.push(`rgba(0,0,0,${a.toFixed(3)}) ${((centre+half*x)*100).toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(0,0,0,0) 0%,${out.join(',')},rgba(0,0,0,0) 100%)`;
+};
+const stops=(r,scale,off)=>r.map(([t,c])=>`${c} ${((off+t*scale)*100).toFixed(2)}%`).join(',');
+const SKY=ramp([[0,'#01030b'],[.34,'#02091f'],[.56,'#0a2044'],[.74,'#20507f'],
+                [.88,'#6d9dc7'],[.95,'#c3dbe8'],[1,'#e9f0f2']],48);
+const SUN=ramp([[0,'rgba(255,248,226,1)'],[.15,'rgba(255,206,108,1)'],
+                [.28,'rgba(255,142,24,0.99)'],[.42,'rgba(246,104,12,0.82)'],
+                [.57,'rgba(198,72,14,0.46)'],[.74,'rgba(124,48,18,0.17)'],
+                [.89,'rgba(54,28,20,0.04)'],[1,'rgba(18,12,16,0)']],40);
+const WASH=ramp([[0,'rgba(255,132,36,0.40)'],[.26,'rgba(214,88,22,0.22)'],
+                 [.56,'rgba(112,46,20,0.06)'],[1,'rgba(24,14,14,0)']],40);
+function buildSky(){
+  const W=innerWidth, H=innerHeight, diag=Math.hypot(W,H);
+  SPAN=Math.ceil((W+H)*1.06);                 // long enough to reach every corner along the fold
+  SUNR=Math.min(W,H)*1.30;
+  WASHR=SUNR*1.20;
+  const SKYSCALE=(W+H)*0.42;                  // how far the night reaches from the fold
+  SKYH=Math.ceil(SKYSCALE*1.7);
+  LIMBL=Math.round(SUNR*0.33);                // the lit segment of horizon
+  GLOWL=Math.round(LIMBL*2.1);
+
+  paper.style.width=SPAN+'px'; paper.style.height=SPAN+'px';
+  fold.style.width=SPAN+'px';
+  dawn.style.width=SPAN+'px'; dawn.style.height=SKYH+'px';
+  limb.style.width=LIMBL+'px'; limbGlow.style.width=GLOWL+'px';
+  const GB=Math.ceil(WASHR*2);
+  glow.style.width=GB+'px'; glow.style.height=GB+'px';
+
+  /* the sky: pale at the fold, night far from it — measured in pixels, so it holds
+     its shape wherever the fold happens to be */
+  const skyPx=SKY.map(([t,c])=>`${c} ${((1-t)*SKYSCALE).toFixed(0)}px`).reverse().join(',');
+  /* and a shadow running along the fold, so one end of the horizon stays dark */
+  const a=(-0.48*diag).toFixed(0), b=(0.09*diag).toFixed(0), c2=(0.65*diag).toFixed(0);
+  dawn.style.background=
+    `linear-gradient(90deg,rgba(1,3,11,0) calc(50% + ${a}px),`+
+      `rgba(1,4,14,.34) calc(50% + ${b}px),rgba(1,3,10,.74) calc(50% + ${c2}px)),`+
+    `linear-gradient(0deg,${skyPx})`;
+
+  /* the sun, drawn once into its own box and simply moved around */
+  glow.style.background=
+    `radial-gradient(circle ${SUNR.toFixed(0)}px at 50% 50%,${stops(SUN,1,0)}),`+
+    `radial-gradient(circle ${WASHR.toFixed(0)}px at 50% 50%,${stops(WASH,1,0)})`;
+
+  /* the limb is its own short segment now, so its taper never has to be recomputed */
+  limb.style.background=taper(0.5,0.5,[255,198,72],[255,112,0],1.00,46);
+  const m=taperMask(0.5,0.5,0.9,40);
+  limbGlow.style.webkitMaskImage=m; limbGlow.style.maskImage=m;
+}
+
+  let logoBox=null;
+  const measureLogo=()=>{ logoBox=logo.getBoundingClientRect() };
+  addEventListener('resize',()=>{ measureLogo(); buildSky() });
+  setTimeout(()=>{ measureLogo(); buildSky() },0);
+
+  const items=PAGES.map(p=>{
+    const li=document.createElement('li');
+    li.innerHTML='<span>'+p.label+'</span>';
+    li.addEventListener('click',e=>{
+      e.stopPropagation();
+      li.querySelector('span').animate(
+        [{transform:'translateX(-14px)'},{transform:'translateX(-40px)',opacity:.15},
+         {transform:'translateX(-14px)',opacity:1}],
+        {duration:620,easing:'cubic-bezier(.2,.8,.2,1)'});
+      if(p.label===HERE){ open=false; want=0; return }   // already here: lay it back down
+      if(p.url) leaveTo(p.url);
+    });
+    underList.appendChild(li); return li;
+  });
+
+  const MAXD=()=>innerWidth+innerHeight;
+  /* rest the peel short of the mark, exactly as the hero does */
+  const OPEN=()=>{
+    const r=logoBox||logo.getBoundingClientRect();
+    /* Tall/portrait screens: peel a little past the brand mark so the crease clears it
+       and the whole logo sits cleanly on the cream, matching the hero. */
+    if(innerHeight > innerWidth){
+      const cMax=(innerWidth-r.left)+(innerHeight-r.top);
+      const pad=Math.max(58, innerHeight*0.045);
+      return clamp(Math.max(MAXD()*0.32, cMax+pad), 0, MAXD()*0.9);
+    }
+    const clear=r.right+r.bottom+Math.max(90,innerWidth*0.06);
+    return Math.max(MAXD()*0.32, MAXD()-clear);
+  };
+  let d=0, want=0, dragging=false, moved=false, open=false, sx=0, sy=0;
+  let lastPT='mouse';
+
+  /* Leaving: carry the peel all the way past the far corner so the paper covers the whole
+     window - cream ground, black mark - and only then follow the link. The next page opens
+     on the same cream ground with the same black mark, so the two documents meet on an
+     identical frame and the seam does not show. */
+  let leaving=null, leaveAt=0, went=false;
+  function leaveTo(url){
+    if(leaving) return;
+    leaving=url; leaveAt=performance.now(); open=true; want=MAXD();
+  }
+
+  /* Arriving: the content and the flap ease in over the cream. */
+  const ENTRY_DELAY=90, ENTRY_MS=620, T0=performance.now();
+  let entry=0;
+  const onPaper=(x,y)=>((innerWidth-x)+(innerHeight-y)) < d;
+  const nearCorner=(x,y)=>((innerWidth-x)+(innerHeight-y))<340;
+  /* Opening is a tap/click of the info mark alone - the generous 340 corner band no longer
+     opens the menu, so a tap meant for content near the corner is never swallowed. */
+  const onDog=(x,y)=>{ const r=dog.getBoundingClientRect(), pad=12;
+    return x>=r.left-pad && x<=r.right+pad && y>=r.top-pad && y<=r.bottom+pad; };
+
+  addEventListener('pointerdown',e=>{
+    if(leaving) return;
+    lastPT=e.pointerType;
+    /* Anything the page itself owns takes the press: the mark, the nav, an open profile,
+       and the headshots - on a narrow screen a headshot can sit inside the corner band,
+       and tapping it must open that person, not start a peel. */
+    if(e.target.closest('#logo,#underList,.ovl,.face')) return;
+    sx=e.clientX; sy=e.clientY; moved=false;
+    /* Drag only ever adjusts an already-open menu; opening is a tap of the info mark.
+       On a sub-page the drag is mouse-only: a touch-drag would fight the page's own
+       scroll behind the peel, so on touch the menu is tap-to-open / tap-off-to-close
+       with no drag. (The hero has no scroll behind it, so it keeps the touch-drag.)
+       A sub-page body is not user-select:none, so cancel only presses that start a drag. */
+    if(open && e.pointerType!=='touch'){ e.preventDefault();
+      dragging=true; document.body.style.cursor='grabbing' }
+  });
+  addEventListener('pointermove',e=>{
+    if(Math.hypot(e.clientX-sx,e.clientY-sy)>(lastPT==='touch'?10:6)) moved=true;
+    if(!dragging) return;
+    if(moved) want=clamp((innerWidth-e.clientX)+(innerHeight-e.clientY),0,MAXD());
+  });
+  addEventListener('pointerup',e=>{
+    if(leaving) return;
+    /* Opening is a tap/click of the info mark alone; dragging (mouse only) adjusts an
+       already-open menu and can drag it closed. A corner swipe never opens it. */
+    const wasDrag = dragging && moved;
+    dragging=false; document.body.style.cursor='';
+    if(wasDrag){ open = want > OPEN()*0.42; want = open? OPEN() : 0; return; }
+    if(moved) return;                                    // a scroll/slide, not a tap
+    if(open){ if(!onPaper(e.clientX,e.clientY)){ open=false; want=0 } return; }  // tap off the open paper → close
+    if(onDog(e.clientX,e.clientY)){ open=true; want=OPEN(); }                    // only the info mark opens
+  });
+  addEventListener('keydown',e=>{ if(e.key==='Escape' && open){ open=false; want=0 } });
+
+  let warm=false, grainOn=false, lastSun=-1, foldOn=false, sunCx=0, sunCy=0;
+
+  LIFT.frame.push(()=>{
+    if(dragging) d=want;
+    else { d+=(want-d)*LIFT.ease(0.1); if(Math.abs(want-d)<0.4) d=want }
+
+    const _now=performance.now();
+    entry=clamp((_now-T0-ENTRY_DELAY)/ENTRY_MS,0,1);
+    const ein=entry*entry*(3-2*entry);          // smoothstep, so the arrival is not a step
+    /* `leaving` is never cleared, and the frame is not cut short. The browser keeps
+       painting this document until the new one commits, so clearing it would let lv fall
+       back to 0 and flash the links bright again on the last frames before the change. */
+    if(leaving && !went && (d>MAXD()*0.985 || _now-leaveAt>1600)){
+      went=true; location.href=leaving;
+    }
+    const dp=-d/SQ2, off=-SPAN/2;
+    paper.style.transform=`rotate(-45deg) translate(${off}px,${dp.toFixed(1)}px)`;
+    const T=innerWidth+innerHeight;
+    const q=clamp(d/OPEN(),0,1.6);
+
+    /* The page's content fades out entirely behind the sky, on the same 0.95 -> 0.75
+       window the hero uses for its bloom: finished while the sky is still near-solid, so
+       nothing is ever seen half-drawn through the night side. */
+    const fadeOut=clamp((0.95-q)/0.20,0,1);
+    const shown=fadeOut*ein;
+    if(sheet){ sheet.style.opacity=shown;
+               sheet.style.visibility=shown>0.001?'':'hidden' }
+
+    if((d>2)!==grainOn){ grainOn=d>2; grain.style.opacity=grainOn?0.06:0 }
+
+    const sun=clamp((q-0.42)/0.5,0,1);
+    const sq=Math.round(sun*100)/100;
+    if(sq!==lastSun){
+      lastSun=sq;
+      dawn.style.opacity=sq; glow.style.opacity=sq;
+      limb.style.opacity=sq; limbGlow.style.opacity=sq;
+    }
+    if((sun>0)!==warm){ warm=sun>0;
+      fold.style.background = warm
+        ? 'linear-gradient(90deg,rgba(255,228,190,0) 34%,rgba(255,228,190,.30) 50%,rgba(255,214,160,0) 68%)'
+        : 'linear-gradient(90deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.7) 50%,rgba(255,255,255,0) 72%)';
+    }
+    if(sq>0){
+      dawn.style.transform=`rotate(-45deg) translate(${off}px,${(dp-SKYH).toFixed(1)}px)`;
+      const S=T-d;
+      const x1=Math.min(S,innerWidth),  y1=S-x1;
+      const y2=Math.min(S,innerHeight), x2=S-y2;
+      const hx=x2+(x1-x2)*0.29, hy=y2+(y1-y2)*0.29;
+      const k=SUNR*0.28;                          // buried under the horizon
+      sunCx=hx+k; sunCy=hy+k;
+      glow.style.transform=`translate(${sunCx.toFixed(1)}px,${sunCy.toFixed(1)}px) translate(-50%,-50%)`;
+      limb.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-2px)`;
+      limbGlow.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-25px)`;
+    }
+
+    if((d>6)!==foldOn){ foldOn=d>6; fold.style.opacity=foldOn?1:0 }
+    dog.style.opacity = clamp(1-q*8,0,1)*ein;
+
+    /* On the way out the links fade with the last of the fold, so the final frame before
+       the link is followed is bare cream and a black mark - the frame the next page opens
+       on. Leave them lit and they pop away at the seam. */
+    const lv = leaving ? clamp((d-OPEN())/Math.max(1,MAXD()-OPEN()),0,1) : 0;
+    items.forEach((li,i)=>{
+      const o=clamp((q-(0.18+i*0.09))/0.28,0,1)*(1-lv);
+      li.style.opacity=o;
+      li.style.transform=`translateX(${(1-o)*30}px)`;
+    });
+    under.classList.toggle('live', q>0.5);
+
+    /* the mark flips white -> black if the paper reaches it, or if the sky behind it gets
+       bright enough that white would stop reading */
+    const r=logoBox||logo.getBoundingClientRect();
+    const lx=r.left+r.width*0.5, ly=r.top+r.height*0.5;
+    const c=(innerWidth-lx)+(innerHeight-ly);
+    const onPaperNow=clamp((d-(c-110))/200,0,1);
+    const lit=sun>0? clamp((1-Math.hypot(lx-sunCx,ly-sunCy)/SUNR-0.60)/0.10,0,1)*sun : 0;
+    /* Inverted from the hero. There the mark starts white on a black bloom and goes black
+       when the paper or the sun arrives. Here it starts black on a cream page and goes
+       white only once the night sky is behind it - minus the sun's wash, and minus the
+       paper if the fold ever reached it. */
+    const dark=clamp(sq-lit-onPaperNow,0,1);
+    logoW.style.opacity=dark; logoB.style.opacity=1-dark;
+  });
+
+  tick();
+})();
+
+</script>
+</body>
+</html>

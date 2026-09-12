@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dabble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#f3efe7;color:#14140f;
+      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;
+      -webkit-font-smoothing:antialiased}
+  img{display:block}
+
+  .inner{max-width:1180px;margin:0 auto;
+      padding:clamp(110px,17vh,180px) clamp(22px,5vw,56px) clamp(70px,11vh,120px)}
+  /* Center the content between the two fixed marks - the dabble logo's right edge
+     (bottom-left) and the info mark's left edge (bottom-right) - rather than in the raw
+     viewport, so every sub-page aligns the same way. Insets taken verbatim from lift.txt.
+     Desktop only; on a phone the marks sit in the corners and the content is full width. */
+  @media(min-width:760px){
+    #sheet{padding-left:calc(clamp(18px,3vw,40px) + clamp(96px,10.5vw,148px));
+           padding-right:calc(clamp(20px,2.4vw,34px) + clamp(26px,2.6vw,36px))}
+    .inner{padding-left:clamp(10px,1.6vw,30px);padding-right:clamp(10px,1.6vw,30px)}
+  }
+  h1{font-weight:700;letter-spacing:-.03em;font-size:clamp(1.9rem,4.6vw,3.2rem);
+      line-height:1;margin:0 0 clamp(34px,5vh,48px)}
+
+  /* ---- the whole collective, two rows of five; each one opens a profile ---- */
+  .faces{display:grid;grid-template-columns:repeat(5,1fr);gap:20px 16px}
+  .face{position:relative;display:block;padding:0;border:0;background:none;cursor:pointer;
+      font:inherit;color:inherit;overflow:hidden}
+  .face img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#e2ddd2;
+      transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+  .face:hover img,.face:focus-visible img{transform:scale(1.04)}
+  /* the name arrives on a scrim rather than over bare photography, so it stays legible
+     whatever the person is wearing */
+  .face .nm{position:absolute;inset:0;display:flex;align-items:flex-end;
+      padding:12px 12px 11px;opacity:0;transition:opacity .28s ease;
+      background:linear-gradient(0deg,rgba(12,10,8,.78) 0%,rgba(12,10,8,.30) 46%,rgba(12,10,8,0) 78%);
+      font-size:12px;letter-spacing:.02em;color:#fff;text-align:left;pointer-events:none}
+  .face:hover .nm,.face:focus-visible .nm{opacity:1}
+  .face:focus-visible{outline:2px solid #14140f;outline-offset:3px}
+  /* Five across stops being legible on a phone - the faces land under 65px. Three keeps
+     them readable at the cost of the two-row shape. */
+  @media (max-width:620px){ .faces{grid-template-columns:repeat(3,1fr);gap:14px 10px}
+    /* leave room under the last row so it scrolls clear of the fixed brand mark */
+    .inner{padding-bottom:clamp(150px,22vh,200px)} }
+  /* No hover on touch, so the name would never show. Keep it visible there instead. */
+  @media (hover:none){ .face .nm{opacity:1} }
+
+  .intro{font-size:clamp(13px,1.15vw,14.5px);line-height:1.9;color:#4a463c;
+      max-width:60ch;margin:clamp(38px,5vh,56px) 0 0}
+
+  /* ---- a profile, over the page ---- */
+  .ovl{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+      padding:clamp(14px,3vh,44px);background:rgba(16,14,11,.74);
+      backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      opacity:0;pointer-events:none;transition:opacity .34s ease}
+  .ovl.on{opacity:1;pointer-events:auto}
+  .card{position:relative;width:min(1000px,100%);max-height:100%;overflow-y:auto;
+      background:#f3efe7;display:grid;grid-template-columns:1fr 1fr;
+      gap:clamp(26px,4vw,52px);align-items:center;
+      padding:clamp(28px,4vw,52px);padding-bottom:clamp(96px,13vh,132px);box-shadow:0 50px 140px rgba(0,0,0,.5)}
+  /* the text column centers against the photo, but the photo is pinned to the top, so the
+     name's top is always at or below the photo's top - it floats down when the bio is short
+     and stops level with the photo when the bio is long enough to fill the height. */
+  .card .im{align-self:start}
+  .card img{width:100%;aspect-ratio:4/5;object-fit:cover;background:#e2ddd2}
+  .card .noshot{width:100%;aspect-ratio:4/5;background:#e2ddd2}
+  .card h2{font-weight:500;font-size:clamp(1.4rem,2.6vw,2rem);letter-spacing:-.02em;margin:0}
+  .card .role{display:block;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+      color:#a0957f;margin-top:16px}
+  .card .bio{display:block;font-size:clamp(13px,1.1vw,14px);line-height:1.85;color:#4a463c;
+      margin-top:26px;max-width:44ch}
+  .card .bio .bl{display:block}
+  .card .bio .bl + .bl{margin-top:.9em}
+  /* the label keeps the small-caps voice; the project names do not */
+  .card .did{margin-top:30px;padding-top:18px;border-top:1px solid rgba(20,20,15,.14);max-width:44ch}
+  .card .did b{display:block;font-weight:500;font-size:9.5px;letter-spacing:.24em;
+      text-transform:uppercase;color:#a0957f;margin-bottom:12px}
+  .card .did .j{display:block;font-size:12.5px;line-height:1.65;color:#6b6555;margin-bottom:.5em;
+      text-decoration:none;transition:color .18s ease}
+  .card .did a.j{cursor:pointer}
+  .card .did a.j:hover{color:#14140f}
+  /* a floating preview of the project, above the cursor (desktop pointers) */
+  .proj-preview{position:fixed;z-index:80;pointer-events:none;opacity:0;
+      width:clamp(170px,18vw,240px);background:#ddd8cd;box-shadow:0 26px 64px rgba(0,0,0,.42);
+      transition:opacity .16s ease;transform:translate(-50%,-100%)}
+  .proj-preview.on{opacity:1}
+  .proj-preview img{display:block;width:100%;height:auto}
+  /* on touch there is no hover, so the projects read as tappable buttons */
+  @media(hover:none){
+    .card .did .j{border:1px solid rgba(20,20,15,.22);padding:11px 14px;margin-bottom:10px;
+        color:#14140f}
+  }
+  .x{position:absolute;top:0;right:0;z-index:3;appearance:none;border:0;cursor:pointer;
+      background:rgba(243,239,231,.9);color:#14140f;font-family:inherit;font-size:10px;
+      letter-spacing:.26em;text-transform:uppercase;padding:14px 18px;
+      transition:background .2s ease,color .2s ease}
+  .x:hover{background:#14140f;color:#f3efe7}
+  @media (max-width:720px){
+    .card{grid-template-columns:1fr;align-items:start;padding-top:52px;
+        padding-bottom:clamp(150px,24vh,210px)}
+    .card img,.card .noshot{aspect-ratio:1/1}
+  }
+
+  /* ---- the corner lift, on a sub-page ----
+     Same fold, same sunrise, same nav as the hero: the CSS below and the sky maths in the
+     script are taken verbatim from H-peel.txt by tools/mklift. What differs is the host.
+     The hero drives the peel from its HERO object and fades the bloom out behind the sky;
+     a sub-page has no bloom, so it fades its own content on the same curve and runs the
+     peel on a small frame-loop shim. Two implementations of one idea: if you retune the
+     peel in H-peel.txt, regenerate this. */
+  .dawn{position:fixed;left:100%;top:100%;z-index:984;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  .glow{position:fixed;left:0;top:0;z-index:985;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  .grain{position:fixed;inset:0;z-index:987;pointer-events:none;mix-blend-mode:overlay;opacity:0;
+      transition:opacity .9s ease;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+      background-size:140px 140px}
+  .paper{position:fixed;left:100%;top:100%;z-index:990;transform-origin:0 0;will-change:transform;
+      background:linear-gradient(180deg,#e9e4da 0px,#fbf8f2 760px,#f5f1e9 1800px)}
+  .under{position:fixed;inset:0;z-index:991;pointer-events:none;
+      -webkit-user-select:none;user-select:none}
+  .under.live ol{pointer-events:auto}
+  .under ol{pointer-events:none;list-style:none;position:absolute;right:clamp(26px,4.4vw,64px);bottom:clamp(26px,4.6vh,60px);
+      text-align:right;display:grid;gap:clamp(6px,1.4vh,14px)}
+  .under li{font-family:'Roboto Mono',monospace;font-weight:500;text-transform:uppercase;
+      letter-spacing:.02em;line-height:1;color:#12120f;cursor:pointer;
+      font-size:clamp(1rem,2.9vw,2.35rem)}
+  .under li span{display:inline-block;transition:transform .28s cubic-bezier(.2,.8,.2,1),color .2s ease}
+  .under li:hover span{transform:translateX(-14px);color:#e4581a}
+  .fold{position:fixed;z-index:995;left:100%;top:100%;height:1px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0}
+  .limbGlow{position:fixed;left:0;top:0;z-index:988;height:26px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;
+      background:linear-gradient(0deg,rgba(255,152,36,.92),rgba(255,126,20,.55) 34%,rgba(255,110,10,0) 100%)}
+  .limb{position:fixed;left:0;top:0;z-index:989;height:3px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;filter:blur(1px)}
+  .dog{position:fixed;right:clamp(20px,2.4vw,34px);bottom:clamp(18px,2.4vh,30px);z-index:940;
+      cursor:pointer;width:clamp(26px,2.6vw,36px);line-height:0}
+  .dog img{display:block;width:100%;height:auto;pointer-events:none}
+  .logo{position:fixed;left:clamp(18px,3vw,40px);bottom:clamp(16px,3vh,34px);z-index:1000;
+      width:clamp(96px,10.5vw,148px);pointer-events:none}
+  .logo img{display:block;width:100%;height:auto;position:absolute;left:0;bottom:0}
+  .logo img.b{opacity:0}
+  .logo .spacer{position:static;display:block;width:100%;visibility:hidden}
+
+  /* ---- what changes because a sub-page is cream, not black ----
+     The hero rests on a near-black bloom, so its info mark is the white drawing and its
+     wordmark stays white until the paper or the sun reaches it. Here the resting ground
+     is cream, so both of those read as invisible-on-invisible. The info mark is swapped
+     for the black drawing in the script below, and the wordmark's flip is inverted. */
+  /* the page arrives blank: the lift's frame loop fades the content and the mark in */
+  #sheet{opacity:0}
+  /* The hero's mark is decorative and carries pointer-events:none. Here it is the link
+     home, so it has to take a click - and the nav list has to as well, once the page
+     underneath it is hidden. */
+  .logo{pointer-events:auto;cursor:pointer}
+
+
+</style>
+<noscript><style>#sheet{opacity:1!important;visibility:visible!important}</style></noscript>
+</head>
+<body>
+<div id="sheet">
+<div class="inner">
+  <h1>Our Team</h1>
+  <div class="faces" id="faces"></div>
+  
+</div>
+</div>
+
+
+  <div class="dawn" id="dawn"></div>
+  <div class="glow" id="glow"></div>
+  <div class="grain" id="grain"></div>
+  <div class="paper" id="paper"></div>
+  <div class="under" id="under"><ol id="underList"></ol></div>
+  <div class="limbGlow" id="limbGlow"></div>
+  <div class="fold" id="fold"></div>
+  <div class="limb" id="limb"></div>
+  <div class="dog" id="dog" title="lift"></div>
+  <a class="logo" id="logo" href="dabble-hero-peel.html"></a>
+
+
+<div class="ovl" id="ovl">
+  <article class="card" id="card">
+    <button class="x" id="x">Close</button>
+    <div class="im" id="cIm"></div>
+    <div>
+      <h2 id="cName"></h2>
+      <span class="role" id="cRole"></span>
+      <span class="bio" id="cBio"></span>
+      <div id="cDid"></div>
+    </div>
+  </article>
+</div>
+
+<script>
+const TEAM = [{"name": "Anastasha Rachel Gunawan", "role": "", "bio": "I am an artist, technologist, and inquirer; I coax the collective imagination through technologies for ritual and magic. My practice of inquiry involves the creation of these handmade technological artifacts, designing interventions (spaces, events, media) to invite more of them, and reading ancient & new texts about technological discovery/fear/hope. They remind me that we are moving in cycles, re-encountering ourselves time & again.", "photo": "assets/team/anastasha.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}, {"slug": "pixar lab.ble", "name": "Pixar Lab.ble · 2026", "url": "dabblers.html#pixar%20lab.ble", "img": "assets/pixar%20lab.ble/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "lagu hantu", "name": "Lagu Hantu · 2026", "url": "stories.html#lagu%20hantu", "img": "assets/lagu%20hantu/main.jpg"}, {"slug": "desa-kala-patra", "name": "desa-kala-patra · 2026", "url": "stories.html#desa-kala-patra", "img": "assets/desa-kala-patra/main.jpg"}, {"slug": "light play", "name": "Exploratorium — Light Play · 2025", "url": "stories.html#light%20play", "img": "assets/light%20play/main.jpg"}]}, {"name": "Diane Rhim", "role": "", "bio": "Loves: Craft as a form of care, translating memory into objects, the ocean\n\nInterests & Hobbies: Women’s health, food and nutrition, learning about care traditions across cultures, scuba diving, sunbathing with my dog\n\nKey Skills: Product & experience design and strategy, storytelling across different mediums, human-centered design research, CPG, systems thinking, and blending new technologies across physical and digital experiences.\n\n“Nature is pleased with simplicity.”  - Isaac Newton\"", "photo": "assets/team/diane.jpg", "projects": [{"slug": "when is now?", "name": "When Is Now? · 2024", "url": "stories.html#when%20is%20now%3F", "img": "assets/when%20is%20now%3F/main.jpg"}]}, {"name": "Eric Singleton", "role": "", "bio": "", "photo": "assets/team/eric.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}]}, {"name": "Julia Hou", "role": "", "bio": "Julia is fascinated with how to turn invisible dynamics into visible experiences. She’s endlessly curious about food, people, relationships and nature, and loves making things that help us notice what might otherwise go unseen.", "photo": "assets/team/julia.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Kel Huang", "role": "", "bio": "Loves: Metaphors, science writing, figuring out what makes people tick, cold beverages\n\nInterests & Hobbies: Dancing (Lindy Hop & House), Textiles, Print Media\n\nKey Skills: Graphic design, workshop facilitation, & building bespoke tools\n\n \"The coin that is lost in the river is found in the river.\"  -Zen Koan", "photo": "assets/team/kel.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "awty", "name": "are we there yet? · 2026", "url": "stories.html#awty", "img": "assets/awty/main.jpg"}]}, {"name": "Maggie Namaganda", "role": "", "bio": "", "photo": "assets/team/maggie.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}]}, {"name": "Rishika Gundi", "role": "", "bio": "A design engineer passionate about improving health through technologies & the systems that govern them. An artist experimenting with new mediums, a collector of languages, a child who loves to play with her food. Will take you up on a game of basketball, tennis or volleyball anytime. \n\nExpertise: CAD, Electromechanical Design, Graphic Design, Medical Device Design + Manufacture + Regulatory, Healthcare (FDA & CMS) Policy", "photo": "assets/team/rishika.jpg", "projects": [{"slug": "illuminate", "name": "Illuminate Pain · 2026", "url": "stories.html#illuminate", "img": "assets/illuminate/main.jpg"}, {"slug": "PS I love you", "name": "P.S. I Love You · 2026", "url": "stories.html#PS%20I%20love%20you", "img": "assets/PS%20I%20love%20you/main.jpg"}]}, {"name": "Sanzhar Myrzagalym", "role": "", "bio": "", "photo": "assets/team/sanzhar.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Shawn Smith", "role": "", "bio": "Shawn's work sits at the intersection of AI, behavior, and community — translating systems thinking into experiences that feel emotionally resonant, socially meaningful, and practically useful.\n\nBefore graduate school at Stanford, he led data teams and built data-driven products inside large organizations, bringing technical depth, product strategy, and organizational leadership to complex human problems. He is now focused on shaping emerging technologies, especially AI, in service of care, connection, and human flourishing.", "photo": "assets/team/shawn.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Yousef Al-Riyami", "role": "", "bio": "Loves: Novels, Poetry, Helping people turn into artists\n\nInterests & Hobbies: Origami, Cafe-hopping, Museum Experiences, Theatre Production\n\nKey Skills: Experiential design, storytelling, & coaching and asking hard questions\n\n \"And watch with glittering eyes the whole world around you because the greatest secrets are always hidden in the most unusual places. Those who don't believe in magic will never find it.\" - Roald Dahl", "photo": "assets/team/yousef.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}, {"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "understanding understanding", "name": "Understanding Understanding · 2026", "url": "stories.html#understanding%20understanding", "img": "assets/understanding%20understanding/main.jpg"}]}];
+const esc = t => String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bioHtml = t => String(t||'').split(/\n+/).map(x=>x.trim()).filter(Boolean)
+                    .map(x=>'<span class="bl">'+esc(x)+'</span>').join('');
+const shot = p => p.photo ? '<img src="'+esc(p.photo)+'" alt="'+esc(p.name)+'">'
+                          : '<span class="noshot"></span>';
+
+document.getElementById('faces').innerHTML = TEAM.map((p,i)=>
+  '<button class="face" data-i="'+i+'">'
+  + (p.photo ? '<img loading="lazy" src="'+esc(p.photo)+'" alt="'+esc(p.name)+'">'
+             : '<span class="noshot"></span>')
+  + '<span class="nm">'+esc(p.name)+'</span></button>').join('');
+
+const ovl=document.getElementById('ovl'), card=document.getElementById('card');
+let open=false;
+
+/* desktop-only floating preview of a project, following the cursor */
+const canHoverProj = matchMedia('(hover:hover) and (pointer:fine)').matches;
+let projPV=null, projIMG=null;
+if(canHoverProj){
+  projPV=document.createElement('div'); projPV.className='proj-preview';
+  projPV.innerHTML='<img alt="">'; document.body.appendChild(projPV);
+  projIMG=projPV.querySelector('img');
+  const did=document.getElementById('cDid');
+  did.addEventListener('pointerover',e=>{
+    const a=e.target.closest('a.j'); if(!a||!a.dataset.img) return;
+    if(projIMG.getAttribute('src')!==a.dataset.img) projIMG.src=a.dataset.img;
+    projPV.classList.add('on');
+  });
+  did.addEventListener('pointermove',e=>{
+    if(!projPV.classList.contains('on')) return;
+    const near=e.clientY<300;
+    projPV.style.left=e.clientX+'px';
+    projPV.style.top=(near? e.clientY+20 : e.clientY-14)+'px';
+    projPV.style.transform=near? 'translate(-50%,0)' : 'translate(-50%,-100%)';
+  });
+  did.addEventListener('pointerout',e=>{
+    const a=e.target.closest('a.j'); if(!a) return;
+    if(e.relatedTarget && a.contains(e.relatedTarget)) return;
+    projPV.classList.remove('on');
+  });
+}
+function hideProjPreview(){ if(projPV) projPV.classList.remove('on'); }
+
+function openProfile(i){
+  const p=TEAM[i]; if(!p) return;
+  document.getElementById('cIm').innerHTML = shot(p);
+  document.getElementById('cName').textContent = p.name;
+  const role=document.getElementById('cRole');
+  role.textContent = p.role || ''; role.style.display = p.role ? '' : 'none';
+  const bio=document.getElementById('cBio');
+  bio.innerHTML = bioHtml(p.bio || ''); bio.style.display = p.bio ? '' : 'none';
+  document.getElementById('cDid').innerHTML = (p.projects && p.projects.length)
+    ? '<div class="did"><b>Projects</b>'
+      + p.projects.map(j=> j.url
+          ? '<a class="j" href="'+esc(j.url)+'"'+(j.img?' data-img="'+esc(j.img)+'"':'')+'>'+esc(j.name)+'</a>'
+          : '<span class="j">'+esc(j.name)+'</span>').join('') + '</div>' : '';
+  card.scrollTop=0;
+  ovl.classList.add('on'); open=true;
+  document.body.style.overflow='hidden';
+  document.getElementById('x').focus();
+}
+function closeProfile(){
+  if(!open) return;
+  open=false; ovl.classList.remove('on'); document.body.style.overflow=''; hideProjPreview();
+}
+
+document.getElementById('faces').addEventListener('click',e=>{
+  const b=e.target.closest('.face'); if(b) openProfile(+b.dataset.i);
+});
+document.getElementById('x').addEventListener('click',closeProfile);
+ovl.addEventListener('click',e=>{ if(e.target===ovl) closeProfile() });
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeProfile() });
+/* the lift takes the whole screen; a profile card left open underneath would show
+   through the sky, so put it away as soon as the corner is touched */
+addEventListener('pointerdown',e=>{
+  const corner=((innerWidth-e.clientX)+(innerHeight-e.clientY))<340;
+  if(corner && open) closeProfile();
+},true);
+</script>
+<script>
+
+(function(){
+  const PAGES = [{"label": "Stories", "url": "stories.html"}, {"label": "Dabblers", "url": "dabblers.html"}, {"label": "Our Team", "url": "our-team.html"}, {"label": "About", "url": "about.html"}, {"label": "Contact", "url": "contact.html"}], HERE = "Our Team", LOGO = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTk0Mi4yLDU0OS43Yy0xMjAuMDUsMC0yMTcuODMsOTYuOTktMjE3LjgzLDIxNy4wMywwLDY5LjQ3LDMyLjc1LDEzMS40OSw4My42MSwxNzEuNDEsMTguMDgtMTUuODMsNDAuNTMtMjUuODgsNjQuMTktMjguNzctNTIuNTktMjYuMDEtODguOTctODAuMjgtODguOTctMTQyLjY0LDAtODcuNDUsNzEuNTUtMTU4LjIsMTU5LTE1OC4yczE1OC4yLDcwLjc1LDE1OC4yLDE1OC4yLTY3LjQ3LDE1NS42My0xNTIuMDcsMTU4Ljg4YzIwLjQzLDEyLjE3LDM2LjgzLDMwLjUxLDQ2LjkyLDUyLjM4LDQwLjc2LTEwLjI2LDc3LjExLTMyLjA3LDEwNS4xNS02MS44djY0LjRoNTguODN2LTIxMy44NmMwLTEyMC4wNC05Ni45OS0yMTcuMDMtMjE3LjAzLTIxNy4wM1oiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNMTEwMC40LDEwMTYuMTFoNTguOHYyNzQuNTZjMCw4Ny42MSw3MC43NSwxNTguMzYsMTU4LjM2LDE1OS4wNnY1OC44Yy0xMjAuMTgsMC0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzQuMzJaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTE1MDUuOTcsMTQ0Ni42OWMxMC4zMSwxLjY0LDIwLjYyLDMuMjgsMzAuOTIsMy4yOCw3Ny4zMSwwLDE0MS43My01NS43NSwxNTYuMDItMTI5Ljc4aDU5Ljc0Yy0xNC4yOSwxMDYuNTktMTA1Ljg5LDE4OC41OC0yMTUuNzYsMTg4LjU4LTEyMC4xOCwwLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xczk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjOTIuMywwLDE3MS45NSw1Ny4zOSwyMDIuODcsMTM5LjM5bC0yMzMuNzksMjMzLjc5Wk0xNDQ3Ljg4LDE0MjEuODZsMjIwLjQ0LTIyMC40NGMtMjguNTgtNDEuNDYtNzcuMzEtNjkuMzQtMTMxLjQyLTY5LjM0LTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzYsMCw1NS4wNSwyNy44OCwxMDIuODQsNzAuMDQsMTMxLjQyWiIvPgo8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik02ODIuNjEsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2NS40NSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTEyMDAuOCw0OTEuMjNoNTguOHYxMjYuNWMzOS44Mi00Mi4xNyw5Ni4yOC02OC40LDE1OC4zNi02OC40LDEyMC44OCwwLDIxOC4xLDk2Ljk4LDIxOC4xLDIxNy4xNnMtOTYuOTgsMjE4LjEtMjE4LjEsMjE4LjEtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc1LjI2aDBaTTEyNTkuNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNOTY5LjM2LDExMTQuMjZjLTMuMjYtMi4zNi02LjU5LTQuNjItOS45OS02Ljc5LDAtLjAxLS4wMS0uMDEtLjAxLS4wMS0uMDguMDctLjE2LjE1LS4yNS4yMi0zLjA3LDIuOC02LjMxLDUuNDItOS43LDcuODQtMTEuNzIsOC40LTI1LjE3LDE0LjQ3LTM5LjY5LDE3LjU5LS42My4xNS0xLjI3LjI4LTEuOTEuNC0uMzUuMDYtLjcuMTMtMS4wNS4yLS42Ni4xMy0xLjM0LjI1LTIuMDEuMzYtLjgzLjE0LTEuNjUuMjctMi40OC4zOS0uODEuMTEtMS42My4yMi0yLjQ0LjMyLS42NS4wOC0xLjI5LjE1LTEuOTQuMjEtMS4yNC4xNC0yLjQ5LjI0LTMuNzQuMzItLjcyLjA2LTEuNDQuMS0yLjE3LjEzLS42Ny4wNC0xLjM0LjA2LTIuMDEuMDgtLjE0LjAxLS4yOC4wMS0uNDEuMDEtLjE4LjAxLS4zNy4wMS0uNTYuMDEtLjc1LjAyLTEuNS4wMy0yLjI2LjAzLTIuNTgsMC01LjEzLS4wOS03LjY2LS4yNy0xLjI3LS4wOS0yLjUzLS4yLTMuNzgtLjMzLS41LS4wNS0uOTktLjEtMS40OS0uMTctMS40OS0uMTgtMi45Ny0uMzktNC40NC0uNjItMjkuMzUtNC43Ny01NC42NS0yMS40Mi03MS4wMy00NC43MS0yLjEtMi45OC00LjA0LTYuMDYtNS44NC05LjI1LS4yNi0uNDUtLjUxLS45MS0uNzUtMS4zNy0uMDQtLjA3LS4wOC0uMTQtLjEyLS4yMS0uMDQuMDEtLjA3LjAyLS4xMS4wMy0zLjkzLjkxLTcuODIsMS45NC0xMS42NywzLjA3LTM3LjQxLDExLTcwLjg0LDMxLjg5LTk3LjE1LDU5LjY4di0xMjYuNWgtNTguOHYyNzUuMjZjMCwxMjAuMTgsOTYuOTgsMjE4LjEsMjE3LjE2LDIxOC4xczIxOC4xLTk3LjkyLDIxOC4xLTIxOC4xYzAtNzIuNS0zNS4yNC0xMzYuNjUtODkuOC0xNzUuOTJaTTg0MS4yOSwxNDQ5LjI1Yy04Ny42MSwwLTE1OC4zNi03MS42OS0xNTguMzYtMTU5LjA3czcwLjc1LTE1OC4zNiwxNTguMzYtMTU4LjM2LDE1OS4wNyw3MC43NSwxNTkuMDcsMTU4LjM2LTcwLjc1LDE1OS4wNy0xNTkuMDcsMTU5LjA3WiIvPgo8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik03OTEuNjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0LjI3LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGQ9Ik05NDIuODcsNTQ5LjdjLTEyMC4wNSwwLTIxNy44Myw5Ni45OS0yMTcuODMsMjE3LjAzLDAsNjkuNDcsMzIuNzUsMTMxLjQ5LDgzLjYxLDE3MS40MSwxOC4wOC0xNS44Myw0MC41My0yNS44OCw2NC4xOS0yOC43Ny01Mi41OS0yNi4wMS04OC45Ny04MC4yOC04OC45Ny0xNDIuNjQsMC04Ny40NSw3MS41NS0xNTguMiwxNTktMTU4LjJzMTU4LjIsNzAuNzUsMTU4LjIsMTU4LjItNjcuNDcsMTU1LjYzLTE1Mi4wNywxNTguODhjMjAuNDMsMTIuMTcsMzYuODMsMzAuNTEsNDYuOTIsNTIuMzgsNDAuNzYtMTAuMjYsNzcuMTEtMzIuMDcsMTA1LjE1LTYxLjh2NjQuNGg1OC44M3YtMjEzLjg2YzAtMTIwLjA0LTk2Ljk5LTIxNy4wMy0yMTcuMDMtMjE3LjAzWiIvPgo8cGF0aCBkPSJNMTEwMS4wNiwxMDE2LjExaDU4Ljh2Mjc0LjU2YzAsODcuNjEsNzAuNzUsMTU4LjM2LDE1OC4zNiwxNTkuMDZ2NTguOGMtMTIwLjE4LDAtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc0LjMyWiIvPgo8cGF0aCBkPSJNMTUwNS4zMSwxNDQ2LjY5YzEwLjMxLDEuNjQsMjAuNjIsMy4yOCwzMC45MiwzLjI4LDc3LjMxLDAsMTQxLjczLTU1Ljc1LDE1Ni4wMi0xMjkuNzhoNTkuNzRjLTE0LjI5LDEwNi41OS0xMDUuODksMTg4LjU4LTIxNS43NiwxODguNTgtMTIwLjE4LDAtMjE4LjEtOTcuOTItMjE4LjEtMjE4LjFzOTcuOTItMjE3LjE2LDIxOC4xLTIxNy4xNmM5Mi4zLDAsMTcxLjk1LDU3LjM5LDIwMi44NywxMzkuMzlsLTIzMy43OSwyMzMuNzlaTTE0NDcuMjEsMTQyMS44NmwyMjAuNDQtMjIwLjQ0Yy0yOC41OC00MS40Ni03Ny4zMS02OS4zNC0xMzEuNDItNjkuMzQtODcuNjEsMC0xNTkuMDYsNzAuNzUtMTU5LjA2LDE1OC4zNiwwLDU1LjA1LDI3Ljg4LDEwMi44NCw3MC4wNCwxMzEuNDJaIi8+CjxwYXRoIGQ9Ik02ODMuMjcsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2Ni4xMSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGQ9Ik0xMjAxLjQ2LDQ5MS4yM2g1OC44djEyNi41YzM5LjgyLTQyLjE3LDk2LjI4LTY4LjQsMTU4LjM2LTY4LjQsMTIwLjg4LDAsMjE4LjEsOTYuOTgsMjE4LjEsMjE3LjE2cy05Ni45OCwyMTguMS0yMTguMSwyMTguMS0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzUuMjZoMFpNMTI2MC4yNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggZD0iTTk3MC4wMywxMTE0LjI2Yy0zLjI2LTIuMzYtNi41OS00LjYyLTkuOTktNi43OSwwLS4wMS0uMDEtLjAxLS4wMS0uMDEtLjA4LjA3LS4xNi4xNS0uMjUuMjItMy4wNywyLjgtNi4zMSw1LjQyLTkuNyw3Ljg0LTExLjcyLDguNC0yNS4xNywxNC40Ny0zOS42OSwxNy41OS0uNjMuMTUtMS4yNy4yOC0xLjkxLjQtLjM1LjA2LS43LjEzLTEuMDUuMi0uNjYuMTMtMS4zNC4yNS0yLjAxLjM2LS44My4xNC0xLjY1LjI3LTIuNDguMzktLjgxLjExLTEuNjMuMjItMi40NC4zMi0uNjUuMDgtMS4yOS4xNS0xLjk0LjIxLTEuMjQuMTQtMi40OS4yNC0zLjc0LjMyLS43Mi4wNi0xLjQ0LjEtMi4xNy4xMy0uNjcuMDQtMS4zNC4wNi0yLjAxLjA4LS4xNC4wMS0uMjguMDEtLjQxLjAxLS4xOC4wMS0uMzcuMDEtLjU2LjAxLS43NS4wMi0xLjUuMDMtMi4yNi4wMy0yLjU4LDAtNS4xMy0uMDktNy42Ni0uMjctMS4yNy0uMDktMi41My0uMi0zLjc4LS4zMy0uNS0uMDUtLjk5LS4xLTEuNDktLjE3LTEuNDktLjE4LTIuOTctLjM5LTQuNDQtLjYyLTI5LjM1LTQuNzctNTQuNjUtMjEuNDItNzEuMDMtNDQuNzEtMi4xLTIuOTgtNC4wNC02LjA2LTUuODQtOS4yNS0uMjYtLjQ1LS41MS0uOTEtLjc1LTEuMzctLjA0LS4wNy0uMDgtLjE0LS4xMi0uMjEtLjA0LjAxLS4wNy4wMi0uMTEuMDMtMy45My45MS03LjgyLDEuOTQtMTEuNjcsMy4wNy0zNy40MSwxMS03MC44NCwzMS44OS05Ny4xNSw1OS42OHYtMTI2LjVoLTU4Ljh2Mjc1LjI2YzAsMTIwLjE4LDk2Ljk4LDIxOC4xLDIxNy4xNiwyMTguMXMyMTguMS05Ny45MiwyMTguMS0yMTguMWMwLTcyLjUtMzUuMjQtMTM2LjY1LTg5LjgtMTc1LjkyWk04NDEuOTYsMTQ0OS4yNWMtODcuNjEsMC0xNTguMzYtNzEuNjktMTU4LjM2LTE1OS4wN3M3MC43NS0xNTguMzYsMTU4LjM2LTE1OC4zNiwxNTkuMDcsNzAuNzUsMTU5LjA3LDE1OC4zNi03MC43NSwxNTkuMDctMTU5LjA3LDE1OS4wN1oiLz4KPHBhdGggY2xhc3M9ImNscy0yIiBkPSJNNzkyLjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0Ljk0LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg=="}, ICON = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiBub25lOwogICAgICAgIHN0cm9rZTogI2ZmZjsKICAgICAgICBzdHJva2Utd2lkdGg6IDEwcHg7CiAgICAgIH0KCiAgICAgIC5jbHMtMiB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMSIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik01OC40MSwzMi44N2MtMy4yOCwwLTYuMjcsMS44OC02LjI3LDUuNjRzMi45OSw1LjcyLDYuMjcsNS43Miw2LjI3LTEuODksNi4yNy01LjcyLTIuOTktNS42NC02LjI3LTUuNjRaIi8+CiAgICA8cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iNjggNzMgNjggODIgNTIuODMgODIgNTIuODMgNDguMzQgNjMuOTkgNDguMzQgNjMuOTkgNzMgNjggNzMiLz4KICA8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgICAgc3Ryb2tlOiAjMDAwOwogICAgICAgIHN0cm9rZS13aWR0aDogMTBweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMiIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBkPSJNNTguNDEsMzIuODdjLTMuMjgsMC02LjI3LDEuODgtNi4yNyw1LjY0czIuOTksNS43Miw2LjI3LDUuNzIsNi4yNy0xLjg5LDYuMjctNS43Mi0yLjk5LTUuNjQtNi4yNy01LjY0WiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI2OCA3MyA2OCA4MiA1Mi44MyA4MiA1Mi44MyA0OC4zNCA2My45OSA0OC4zNCA2My45OSA3MyA2OCA3MyIvPgogIDwvZz4KPC9zdmc+"};
+  const $ = id => document.getElementById(id);
+  const dawn=$('dawn'), glow=$('glow'), grain=$('grain'), paper=$('paper'),
+        under=$('under'), underList=$('underList'), limbGlow=$('limbGlow'),
+        fold=$('fold'), limb=$('limb'), dog=$('dog'), logo=$('logo'), sheet=$('sheet');
+  [dawn,glow,grain,paper,under,limbGlow,fold,limb,dog,logo]
+    .forEach(el=>document.body.appendChild(el));
+
+  dog.innerHTML = '<img src="'+ICON.black+'" alt="">';
+  logo.innerHTML = '<img class="spacer" src="'+LOGO.white+'" alt="Dabble">'
+                 + '<img class="w" src="'+LOGO.white+'" alt="">'
+                 + '<img class="b" src="'+LOGO.black+'" alt="">';
+  const logoW=logo.querySelector('.w'), logoB=logo.querySelector('.b');
+
+  /* The hero supplies dt, ease and a frame list from its HERO object. There is no bloom
+     here, so stand those three up alone - same shape, same time-based easing, so the peel
+     behaves identically at any refresh rate. */
+  const LIFT={dt:1,frame:[],ease:k=>1-Math.pow(1-k,LIFT.dt)};
+  let _last=performance.now();
+  function tick(now){
+    const t=now||performance.now();
+    LIFT.dt=Math.min(Math.max(t-_last,4),50)/16.667; _last=t;
+    LIFT.frame.forEach(f=>f());
+    requestAnimationFrame(tick);
+  }
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const SQ2=Math.SQRT2;
+  let SPAN=0, SKYH=0, SUNR=0, WASHR=0, LIMBL=0, GLOWL=0;
+
+const ramp=(keys,n)=>{
+  const px=c=>c[0]==='#'? [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16),1]
+                        : c.match(/[\d.]+/g).map(Number);
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    let k=0; while(k<keys.length-2 && keys[k+1][0]<t) k++;
+    const [t0,c0]=keys[k], [t1,c1]=keys[k+1];
+    let u=(t-t0)/(t1-t0); u=Math.min(1,Math.max(0,u));
+    const e=u*u*(3-2*u);
+    const a=px(c0), b=px(c1);
+    const v=[0,1,2].map(j=>Math.round(a[j]+(b[j]-a[j])*e));
+    const a3=(a[3]===undefined?1:a[3]), b3=(b[3]===undefined?1:b[3]);
+    const al=a3+(b3-a3)*e;
+    out.push([t,`rgba(${v[0]},${v[1]},${v[2]},${al.toFixed(3)})`]);
+  }
+  return out;
+};
+const taper=(centre,half,rgbMid,rgbEnd,peak,n,rgbCore,coreW)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const u=i/n;                       // -1..1 across the segment
+    const x=-1+2*u;
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    const m=1-Math.abs(x);
+    let c=[0,1,2].map(j=>Math.round(rgbEnd[j]+(rgbMid[j]-rgbEnd[j])*m));
+    if(rgbCore){                       // a glint of the sun's own edge, dead centre
+      const t=Math.max(0,1-Math.abs(x)/coreW), g=t*t*(3-2*t);
+      c=c.map((v,j)=>Math.round(v+(rgbCore[j]-v)*g));
+    }
+    const pos=(centre+half*x)*100;
+    out.push(`rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)}) ${pos.toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(255,120,0,0) 0%,${out.join(',')},rgba(255,120,0,0) 100%)`;
+};
+const taperMask=(centre,half,peak,n)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const x=-1+2*(i/n);
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    out.push(`rgba(0,0,0,${a.toFixed(3)}) ${((centre+half*x)*100).toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(0,0,0,0) 0%,${out.join(',')},rgba(0,0,0,0) 100%)`;
+};
+const stops=(r,scale,off)=>r.map(([t,c])=>`${c} ${((off+t*scale)*100).toFixed(2)}%`).join(',');
+const SKY=ramp([[0,'#01030b'],[.34,'#02091f'],[.56,'#0a2044'],[.74,'#20507f'],
+                [.88,'#6d9dc7'],[.95,'#c3dbe8'],[1,'#e9f0f2']],48);
+const SUN=ramp([[0,'rgba(255,248,226,1)'],[.15,'rgba(255,206,108,1)'],
+                [.28,'rgba(255,142,24,0.99)'],[.42,'rgba(246,104,12,0.82)'],
+                [.57,'rgba(198,72,14,0.46)'],[.74,'rgba(124,48,18,0.17)'],
+                [.89,'rgba(54,28,20,0.04)'],[1,'rgba(18,12,16,0)']],40);
+const WASH=ramp([[0,'rgba(255,132,36,0.40)'],[.26,'rgba(214,88,22,0.22)'],
+                 [.56,'rgba(112,46,20,0.06)'],[1,'rgba(24,14,14,0)']],40);
+function buildSky(){
+  const W=innerWidth, H=innerHeight, diag=Math.hypot(W,H);
+  SPAN=Math.ceil((W+H)*1.06);                 // long enough to reach every corner along the fold
+  SUNR=Math.min(W,H)*1.30;
+  WASHR=SUNR*1.20;
+  const SKYSCALE=(W+H)*0.42;                  // how far the night reaches from the fold
+  SKYH=Math.ceil(SKYSCALE*1.7);
+  LIMBL=Math.round(SUNR*0.33);                // the lit segment of horizon
+  GLOWL=Math.round(LIMBL*2.1);
+
+  paper.style.width=SPAN+'px'; paper.style.height=SPAN+'px';
+  fold.style.width=SPAN+'px';
+  dawn.style.width=SPAN+'px'; dawn.style.height=SKYH+'px';
+  limb.style.width=LIMBL+'px'; limbGlow.style.width=GLOWL+'px';
+  const GB=Math.ceil(WASHR*2);
+  glow.style.width=GB+'px'; glow.style.height=GB+'px';
+
+  /* the sky: pale at the fold, night far from it — measured in pixels, so it holds
+     its shape wherever the fold happens to be */
+  const skyPx=SKY.map(([t,c])=>`${c} ${((1-t)*SKYSCALE).toFixed(0)}px`).reverse().join(',');
+  /* and a shadow running along the fold, so one end of the horizon stays dark */
+  const a=(-0.48*diag).toFixed(0), b=(0.09*diag).toFixed(0), c2=(0.65*diag).toFixed(0);
+  dawn.style.background=
+    `linear-gradient(90deg,rgba(1,3,11,0) calc(50% + ${a}px),`+
+      `rgba(1,4,14,.34) calc(50% + ${b}px),rgba(1,3,10,.74) calc(50% + ${c2}px)),`+
+    `linear-gradient(0deg,${skyPx})`;
+
+  /* the sun, drawn once into its own box and simply moved around */
+  glow.style.background=
+    `radial-gradient(circle ${SUNR.toFixed(0)}px at 50% 50%,${stops(SUN,1,0)}),`+
+    `radial-gradient(circle ${WASHR.toFixed(0)}px at 50% 50%,${stops(WASH,1,0)})`;
+
+  /* the limb is its own short segment now, so its taper never has to be recomputed */
+  limb.style.background=taper(0.5,0.5,[255,198,72],[255,112,0],1.00,46);
+  const m=taperMask(0.5,0.5,0.9,40);
+  limbGlow.style.webkitMaskImage=m; limbGlow.style.maskImage=m;
+}
+
+  let logoBox=null;
+  const measureLogo=()=>{ logoBox=logo.getBoundingClientRect() };
+  addEventListener('resize',()=>{ measureLogo(); buildSky() });
+  setTimeout(()=>{ measureLogo(); buildSky() },0);
+
+  const items=PAGES.map(p=>{
+    const li=document.createElement('li');
+    li.innerHTML='<span>'+p.label+'</span>';
+    li.addEventListener('click',e=>{
+      e.stopPropagation();
+      li.querySelector('span').animate(
+        [{transform:'translateX(-14px)'},{transform:'translateX(-40px)',opacity:.15},
+         {transform:'translateX(-14px)',opacity:1}],
+        {duration:620,easing:'cubic-bezier(.2,.8,.2,1)'});
+      if(p.label===HERE){ open=false; want=0; return }   // already here: lay it back down
+      if(p.url) leaveTo(p.url);
+    });
+    underList.appendChild(li); return li;
+  });
+
+  const MAXD=()=>innerWidth+innerHeight;
+  /* rest the peel short of the mark, exactly as the hero does */
+  const OPEN=()=>{
+    const r=logoBox||logo.getBoundingClientRect();
+    /* Tall/portrait screens: peel a little past the brand mark so the crease clears it
+       and the whole logo sits cleanly on the cream, matching the hero. */
+    if(innerHeight > innerWidth){
+      const cMax=(innerWidth-r.left)+(innerHeight-r.top);
+      const pad=Math.max(58, innerHeight*0.045);
+      return clamp(Math.max(MAXD()*0.32, cMax+pad), 0, MAXD()*0.9);
+    }
+    const clear=r.right+r.bottom+Math.max(90,innerWidth*0.06);
+    return Math.max(MAXD()*0.32, MAXD()-clear);
+  };
+  let d=0, want=0, dragging=false, moved=false, open=false, sx=0, sy=0;
+  let lastPT='mouse';
+
+  /* Leaving: carry the peel all the way past the far corner so the paper covers the whole
+     window - cream ground, black mark - and only then follow the link. The next page opens
+     on the same cream ground with the same black mark, so the two documents meet on an
+     identical frame and the seam does not show. */
+  let leaving=null, leaveAt=0, went=false;
+  function leaveTo(url){
+    if(leaving) return;
+    leaving=url; leaveAt=performance.now(); open=true; want=MAXD();
+  }
+
+  /* Arriving: the content and the flap ease in over the cream. */
+  const ENTRY_DELAY=90, ENTRY_MS=620, T0=performance.now();
+  let entry=0;
+  const onPaper=(x,y)=>((innerWidth-x)+(innerHeight-y)) < d;
+  const nearCorner=(x,y)=>((innerWidth-x)+(innerHeight-y))<340;
+  /* Opening is a tap/click of the info mark alone - the generous 340 corner band no longer
+     opens the menu, so a tap meant for content near the corner is never swallowed. */
+  const onDog=(x,y)=>{ const r=dog.getBoundingClientRect(), pad=12;
+    return x>=r.left-pad && x<=r.right+pad && y>=r.top-pad && y<=r.bottom+pad; };
+
+  addEventListener('pointerdown',e=>{
+    if(leaving) return;
+    lastPT=e.pointerType;
+    /* Anything the page itself owns takes the press: the mark, the nav, an open profile,
+       and the headshots - on a narrow screen a headshot can sit inside the corner band,
+       and tapping it must open that person, not start a peel. */
+    if(e.target.closest('#logo,#underList,.ovl,.face')) return;
+    sx=e.clientX; sy=e.clientY; moved=false;
+    /* Drag only ever adjusts an already-open menu; opening is a tap of the info mark.
+       On a sub-page the drag is mouse-only: a touch-drag would fight the page's own
+       scroll behind the peel, so on touch the menu is tap-to-open / tap-off-to-close
+       with no drag. (The hero has no scroll behind it, so it keeps the touch-drag.)
+       A sub-page body is not user-select:none, so cancel only presses that start a drag. */
+    if(open && e.pointerType!=='touch'){ e.preventDefault();
+      dragging=true; document.body.style.cursor='grabbing' }
+  });
+  addEventListener('pointermove',e=>{
+    if(Math.hypot(e.clientX-sx,e.clientY-sy)>(lastPT==='touch'?10:6)) moved=true;
+    if(!dragging) return;
+    if(moved) want=clamp((innerWidth-e.clientX)+(innerHeight-e.clientY),0,MAXD());
+  });
+  addEventListener('pointerup',e=>{
+    if(leaving) return;
+    /* Opening is a tap/click of the info mark alone; dragging (mouse only) adjusts an
+       already-open menu and can drag it closed. A corner swipe never opens it. */
+    const wasDrag = dragging && moved;
+    dragging=false; document.body.style.cursor='';
+    if(wasDrag){ open = want > OPEN()*0.42; want = open? OPEN() : 0; return; }
+    if(moved) return;                                    // a scroll/slide, not a tap
+    if(open){ if(!onPaper(e.clientX,e.clientY)){ open=false; want=0 } return; }  // tap off the open paper → close
+    if(onDog(e.clientX,e.clientY)){ open=true; want=OPEN(); }                    // only the info mark opens
+  });
+  addEventListener('keydown',e=>{ if(e.key==='Escape' && open){ open=false; want=0 } });
+
+  let warm=false, grainOn=false, lastSun=-1, foldOn=false, sunCx=0, sunCy=0;
+
+  LIFT.frame.push(()=>{
+    if(dragging) d=want;
+    else { d+=(want-d)*LIFT.ease(0.1); if(Math.abs(want-d)<0.4) d=want }
+
+    const _now=performance.now();
+    entry=clamp((_now-T0-ENTRY_DELAY)/ENTRY_MS,0,1);
+    const ein=entry*entry*(3-2*entry);          // smoothstep, so the arrival is not a step
+    /* `leaving` is never cleared, and the frame is not cut short. The browser keeps
+       painting this document until the new one commits, so clearing it would let lv fall
+       back to 0 and flash the links bright again on the last frames before the change. */
+    if(leaving && !went && (d>MAXD()*0.985 || _now-leaveAt>1600)){
+      went=true; location.href=leaving;
+    }
+    const dp=-d/SQ2, off=-SPAN/2;
+    paper.style.transform=`rotate(-45deg) translate(${off}px,${dp.toFixed(1)}px)`;
+    const T=innerWidth+innerHeight;
+    const q=clamp(d/OPEN(),0,1.6);
+
+    /* The page's content fades out entirely behind the sky, on the same 0.95 -> 0.75
+       window the hero uses for its bloom: finished while the sky is still near-solid, so
+       nothing is ever seen half-drawn through the night side. */
+    const fadeOut=clamp((0.95-q)/0.20,0,1);
+    const shown=fadeOut*ein;
+    if(sheet){ sheet.style.opacity=shown;
+               sheet.style.visibility=shown>0.001?'':'hidden' }
+
+    if((d>2)!==grainOn){ grainOn=d>2; grain.style.opacity=grainOn?0.06:0 }
+
+    const sun=clamp((q-0.42)/0.5,0,1);
+    const sq=Math.round(sun*100)/100;
+    if(sq!==lastSun){
+      lastSun=sq;
+      dawn.style.opacity=sq; glow.style.opacity=sq;
+      limb.style.opacity=sq; limbGlow.style.opacity=sq;
+    }
+    if((sun>0)!==warm){ warm=sun>0;
+      fold.style.background = warm
+        ? 'linear-gradient(90deg,rgba(255,228,190,0) 34%,rgba(255,228,190,.30) 50%,rgba(255,214,160,0) 68%)'
+        : 'linear-gradient(90deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.7) 50%,rgba(255,255,255,0) 72%)';
+    }
+    if(sq>0){
+      dawn.style.transform=`rotate(-45deg) translate(${off}px,${(dp-SKYH).toFixed(1)}px)`;
+      const S=T-d;
+      const x1=Math.min(S,innerWidth),  y1=S-x1;
+      const y2=Math.min(S,innerHeight), x2=S-y2;
+      const hx=x2+(x1-x2)*0.29, hy=y2+(y1-y2)*0.29;
+      const k=SUNR*0.28;                          // buried under the horizon
+      sunCx=hx+k; sunCy=hy+k;
+      glow.style.transform=`translate(${sunCx.toFixed(1)}px,${sunCy.toFixed(1)}px) translate(-50%,-50%)`;
+      limb.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-2px)`;
+      limbGlow.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-25px)`;
+    }
+
+    if((d>6)!==foldOn){ foldOn=d>6; fold.style.opacity=foldOn?1:0 }
+    dog.style.opacity = clamp(1-q*8,0,1)*ein;
+
+    /* On the way out the links fade with the last of the fold, so the final frame before
+       the link is followed is bare cream and a black mark - the frame the next page opens
+       on. Leave them lit and they pop away at the seam. */
+    const lv = leaving ? clamp((d-OPEN())/Math.max(1,MAXD()-OPEN()),0,1) : 0;
+    items.forEach((li,i)=>{
+      const o=clamp((q-(0.18+i*0.09))/0.28,0,1)*(1-lv);
+      li.style.opacity=o;
+      li.style.transform=`translateX(${(1-o)*30}px)`;
+    });
+    under.classList.toggle('live', q>0.5);
+
+    /* the mark flips white -> black if the paper reaches it, or if the sky behind it gets
+       bright enough that white would stop reading */
+    const r=logoBox||logo.getBoundingClientRect();
+    const lx=r.left+r.width*0.5, ly=r.top+r.height*0.5;
+    const c=(innerWidth-lx)+(innerHeight-ly);
+    const onPaperNow=clamp((d-(c-110))/200,0,1);
+    const lit=sun>0? clamp((1-Math.hypot(lx-sunCx,ly-sunCy)/SUNR-0.60)/0.10,0,1)*sun : 0;
+    /* Inverted from the hero. There the mark starts white on a black bloom and goes black
+       when the paper or the sun arrives. Here it starts black on a cream page and goes
+       white only once the night sky is behind it - minus the sun's wash, and minus the
+       paper if the fold ever reached it. */
+    const dark=clamp(sq-lit-onPaperNow,0,1);
+    logoW.style.opacity=dark; logoB.style.opacity=1-dark;
+  });
+
+  tick();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+Exactly one image goes in this folder. It is the one that floats in the swirl on the
+front page and sits at the top of the card. The build fails if this folder is empty or
+has more than one image.

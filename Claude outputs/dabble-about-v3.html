@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dabble — About</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root{--ink:#14140f;--soft:#3b3830;--mute:#6b6555;--faint:#a0957f;--paper:#f3efe7}
+  body{background:var(--paper);color:var(--ink);
+      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;-webkit-font-smoothing:antialiased}
+
+  .scene{position:relative;width:100%;min-height:100vh;overflow:hidden}
+  .scene canvas.ascii{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+  .scene svg.art{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible}
+  .scene .copy{position:absolute;z-index:3;max-width:38ch;line-height:1.9;
+      font-size:clamp(13px,1.15vw,15px);color:var(--soft);letter-spacing:.01em}
+  .scene .copy p{margin:0 0 1.15em}
+  .scene .copy p:last-child{margin-bottom:0}
+  .scene .copy .lead{color:var(--ink)}
+  .scene .copy em{font-style:normal;color:var(--ink);font-weight:500}
+
+  /* draggable objects carry pointer events; the rest of the art does not.
+     pointer-events is inherited, so setting it on the svg root (none) and the .grab
+     group (auto) lets the group's child shapes inherit auto and become hit targets. */
+  svg.art{pointer-events:none}
+  svg.art .grab{pointer-events:auto;cursor:grab}
+  svg.art .grab.dragging{cursor:grabbing}
+
+  .hint{position:absolute;z-index:3;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+      color:var(--faint);opacity:0;transition:opacity .6s ease}
+  .hint.on{opacity:1}
+
+  /* copy placement per scene */
+  #s1 .copy{left:clamp(22px,6vw,80px);top:clamp(90px,15vh,150px)}
+  #s1 .hint{left:clamp(22px,6vw,80px);bottom:clamp(28px,6vh,60px)}
+  #s2 .copy{left:clamp(22px,6vw,80px);top:clamp(70px,12vh,120px)}
+  #s3 .copy{left:clamp(22px,6vw,80px);top:clamp(70px,12vh,120px)}
+
+  @media(max-width:680px){
+    .scene .copy{max-width:80vw}
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="scene" id="s1">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art1"></svg>
+    <div class="copy">
+      <p class="lead">The best path to roll a boulder depends on the terrain.</p>
+      <p class="lead">The best route to sail a ship depends on the wind.</p>
+      <p>Without reading the terrain or the wind, you risk pushing harder up the wrong hill, or rowing blind.</p>
+    </div>
+    <div class="hint" id="hint1">drag the rock &amp; the boat</div>
+  </section>
+
+  <section class="scene" id="s2">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art2"></svg>
+    <div class="copy">
+      <p>At Dabble, we read the grain of the systems that surround a problem and use the conditions
+         most advantageous — technically, financially, and culturally — to unlock it. This leads us to build:</p>
+      <p><em>Products</em> that roll downhill on their own, gaining momentum instead of requiring force.</p>
+      <p><em>Companies</em> that sell into markets already leaning toward the winds, rather than markets we have to convince.</p>
+    </div>
+  </section>
+
+  <section class="scene" id="s3">
+    <canvas class="ascii"></canvas>
+    <svg class="art" id="art3"></svg>
+    <div class="copy">
+      <p class="lead">We build a portfolio of our own companies in-house, and help visionaries do the same with theirs.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const SVGNS="http://www.w3.org/2000/svg";
+const INK="#14140f", SOFT="#3b3830", MUTE="#6b6555", FAINT="#b5ac9b";
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeOut=t=>1-Math.pow(1-t,3);
+const easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const now=()=>performance.now();
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+/* smooth path through points (Catmull-Rom -> cubic bezier) */
+function smoothPath(pts){
+  if(pts.length<2) return "";
+  let d="M"+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+="C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+p2[0].toFixed(1)+" "+p2[1].toFixed(1);
+  }
+  return d;
+}
+
+/* ---------- boat + rock builders ---------- */
+function makeBoat(scale){
+  const g=el("g",{class:"boat"});
+  const s=scale;
+  const hull=el("path",{d:`M ${-30*s} ${6*s} Q ${-34*s} ${16*s} ${-22*s} ${18*s} L ${22*s} ${18*s} Q ${34*s} ${16*s} ${30*s} ${6*s} Z`,
+      fill:"var(--paper)",stroke:INK,"stroke-width":2.4});
+  const mast=el("line",{x1:0,y1:6*s,x2:0,y2:-34*s,stroke:INK,"stroke-width":2.4});
+  const main=el("path",{d:`M ${3*s} ${-32*s} L ${3*s} ${2*s} L ${26*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  const jib=el("path",{d:`M ${-3*s} ${-24*s} L ${-3*s} ${2*s} L ${-20*s} ${2*s} Z`,fill:"none",stroke:INK,"stroke-width":2.4,"stroke-linejoin":"round"});
+  g.append(hull,jib,main,mast);
+  return g;
+}
+function makeRock(r){
+  const g=el("g",{class:"rock"});
+  const c=el("circle",{cx:0,cy:0,r:r,fill:SOFT});
+  g.append(c);
+  return g;
+}
+function setXY(g,x,y,rot,extra){
+  g.setAttribute("transform",`translate(${x.toFixed(1)} ${y.toFixed(1)})`+(rot?` rotate(${rot.toFixed(1)})`:"")+(extra||""));
+}
+
+/* ============================================================= SCENE 1 */
+function Scene1(){
+  const sec=document.getElementById("s1");
+  const svg=document.getElementById("art1");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  const hint=document.getElementById("hint1");
+  let W,H, waterY, hillX0,hillX1, surf, rockRest, rockStart, boatHome, entered=false;
+  let boat, rock, waterline, hillPath, crests=[];
+  let rockPos={x:0,y:0,rot:0}, rockAnim=null, rockDrag=null, rockSunk=false;
+  let boatPos={x:0,y:0}, boatAnim=null, boatDrag=null, boatLanded=false;
+
+  function hillSurf(x){ // a single uphill ramp: waterline at the left foot -> top-right
+    const t=clamp(x/W,0,1);
+    const rise=Math.pow(t,1.12);            // nearly straight, easing gently upward
+    return lerp(waterY, -H*0.02, rise);
+  }
+  // the land wedge between the ramp line and the waterline (where the boat can beach)
+  function inHill(x,y){ return y>hillSurf(x) && y<waterY; }
+
+  function build(){
+    W=sec.clientWidth; H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+    waterY=H*0.60;
+    hillX0=0; hillX1=W;
+    // hill line-art: one uphill ramp rising out of the water to the top-right
+    const pts=[]; for(let x=0;x<=W+40;x+=(W)/60){ pts.push([x, hillSurf(x)]); }
+    hillPath=el("path",{d:smoothPath(pts),fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linecap":"round"});
+    svg.append(hillPath);
+
+    // waterline (gentle wavy stroke) + detached crest squiggles
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"});
+    svg.append(waterline);
+    crests=[];
+    for(let i=0;i<5;i++){
+      const cx=W*(0.08+i*0.13)+ (Math.random()*20-10);
+      const cr=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.2,"stroke-linecap":"round",opacity:.55});
+      cr._x=cx; cr._ph=Math.random()*6.28;
+      crests.push(cr); svg.append(cr);
+    }
+
+    // objects
+    rockRest={x:W*0.36, y:0}; rockRest.y=hillSurf(rockRest.x)-18;
+    rockStart={x:W*0.55, y:0}; rockStart.y=hillSurf(rockStart.x)-18;
+    boatHome={x:W*0.17, y:waterY};
+    rock=makeRock(18); rock.classList.add("grab"); svg.append(rock);
+    // a small chock on the downhill side, so the boulder looks held in place at rest
+    { const rx=rockRest.x, fx=rx-14, tx=rx-34, fy=hillSurf(rx-14), ty=hillSurf(rx-34);
+      const dd=`M${fx.toFixed(1)} ${fy.toFixed(1)} L${fx.toFixed(1)} ${(fy-20).toFixed(1)} L${tx.toFixed(1)} ${ty.toFixed(1)} Z`;
+      svg.append(el("path",{d:dd,fill:"var(--paper)",stroke:INK,"stroke-width":1.6,"stroke-linejoin":"round"}));
+    }
+    boat=makeBoat(1.0); boat.classList.add("grab"); svg.append(boat);
+
+    // initial state
+    rockPos={x:entered?rockRest.x:rockStart.x, y:entered?rockRest.y:rockStart.y, rot:0}; rockSunk=false;
+    boatPos={x:boatHome.x, y:boatHome.y}; boatLanded=false;
+    rockAnim=null; boatAnim=null;
+    layoutObjects(now());
+    attachDrag();
+  }
+
+  function drawWater(t){
+    ctx.clearRect(0,0,W,H);
+    const chW=9, chH=13, rows=Math.ceil((H-waterY)/chH)+1;
+    ctx.font="12px 'Roboto Mono',monospace"; ctx.textBaseline="top";
+    for(let r=0;r<rows;r++){
+      const y=waterY+r*chH;
+      const depth=r/rows;
+      const alpha=(1-depth)*0.42;
+      if(alpha<=0.02) continue;
+      for(let x=0;x<W;x+=chW){
+        // hide water under the hill body (above-water landmass blocks nothing below waterline,
+        // but keep a clean band; draw full width)
+        const p=Math.sin(x*0.021 + t*0.0022 + r*0.55) + 0.6*Math.cos(x*0.011 - t*0.0014 + r*0.3);
+        let ch;
+        if(p>0.95) ch="≈"; else if(p>0.12) ch="~"; else continue;
+        ctx.fillStyle=`rgba(59,56,48,${(alpha* (ch==="≈"?1:0.85)).toFixed(3)})`;
+        ctx.fillText(ch, x, y);
+      }
+    }
+  }
+
+  function layoutWaterline(t){
+    // wavy horizontal line across width
+    let d="M0 "+waterY.toFixed(1);
+    for(let x=0;x<=W;x+=W/40){
+      const y=waterY + Math.sin(x*0.03 + t*0.0016)*3.2 + Math.sin(x*0.013 - t*0.0011)*2.0;
+      d+="L"+x.toFixed(1)+" "+y.toFixed(1);
+    }
+    waterline.setAttribute("d",d);
+    crests.forEach(cr=>{
+      const bob=Math.sin(t*0.002+cr._ph)*3;
+      const x=cr._x, y=waterY-10+bob;
+      cr.setAttribute("d",`M${(x-14).toFixed(1)} ${y.toFixed(1)} q7 -6 14 0 q7 6 14 0`);
+    });
+  }
+
+  function layoutObjects(t){
+    // boat bob when on water
+    let bx=boatPos.x, by=boatPos.y, brot=0;
+    if(!boatLanded){
+      by=boatPos.y+Math.sin(t*0.0026+bx*0.01)*4;
+      brot=Math.sin(t*0.0026+bx*0.01+0.6)*4;
+    }
+    setXY(boat,bx,by,brot);
+    // rock
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+  }
+
+  // ---- animations
+  function rollTo(fromX,fromY,toX,toY,dur,onEnd){
+    const t0=now(); const spin=(fromX>toX? -1:1);
+    const dist=Math.hypot(toX-fromX,toY-fromY);
+    rockAnim=(t)=>{
+      const k=clamp((t-t0)/dur,0,1), e=easeInOut(k);
+      rockPos.x=lerp(fromX,toX,e);
+      rockPos.y=hillSurf(rockPos.x)-18;      // ride the ramp surface
+      rockPos.rot=(spin*dist/ (18*2*Math.PI)*360)*e;
+      if(k>=1){ rockAnim=null; onEnd&&onEnd(); }
+    };
+  }
+  function sinkFrom(x,y){
+    const t0=now(); const dur=1800; rockSunk=true;
+    rockAnim=(t)=>{
+      const k=clamp((t-t0)/dur,0,1);
+      rockPos.x=x + Math.sin(t*0.006)*3*(1-k);
+      rockPos.y=lerp(y, H+30, easeInOut(k));
+      rockPos.rot=k*200;
+      if(k>=1){ rockAnim=null; }
+    };
+  }
+  function boatBackTo(fromX,fromY,toX,toY){
+    const t0=now(); const dur=2800; boatLanded=false;   // rock on the way back
+    boatAnim=(t)=>{
+      const k=clamp((t-t0)/dur,0,1), e=easeInOut(k);
+      boatPos.x=lerp(fromX,toX,e);
+      boatPos.y=lerp(fromY,waterY,e);                   // base line; layout adds the bob
+      if(k>=1){ boatAnim=null; boatPos.x=toX; boatPos.y=waterY; }
+    };
+  }
+
+  function enter(){
+    if(entered) return; entered=true;
+    // rock rolls down to rest, boat drifts in from the left
+    rollTo(rockStart.x,rockStart.y,rockRest.x,rockRest.y,2000);
+    const bx0=-60, t0=now(), dur=1700;
+    boatPos.x=bx0;
+    boatAnim=(t)=>{const k=clamp((t-t0)/dur,0,1);boatPos.x=lerp(bx0,boatHome.x,easeOut(k));if(k>=1)boatAnim=null;};
+    setTimeout(()=>hint.classList.add("on"),1400);
+  }
+
+  // ---- drag
+  function attachDrag(){
+    function pt(ev){const r=sec.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};}
+    rock.addEventListener("pointerdown",ev=>{
+      if(rockSunk) return; ev.preventDefault(); rock.classList.add("dragging"); rock.setPointerCapture(ev.pointerId);
+      rockAnim=null; const p=pt(ev); rockDrag={dx:rockPos.x-p.x,dy:rockPos.y-p.y};
+    });
+    rock.addEventListener("pointermove",ev=>{
+      if(!rockDrag) return; const p=pt(ev);
+      rockPos.x=p.x+rockDrag.dx; rockPos.y=p.y+rockDrag.dy; rockPos.rot=0;
+    });
+    function rockUp(ev){
+      if(!rockDrag) return; rockDrag=null; rock.classList.remove("dragging");
+      try{rock.releasePointerCapture(ev.pointerId)}catch(e){}
+      if(rockPos.y>waterY){ sinkFrom(rockPos.x,rockPos.y); }
+      else { // on the hill (or sky) -> gradual roll back to its start
+        const sx=clamp(rockPos.x,0,W);
+        rockPos.x=sx; rockPos.y=hillSurf(sx)-18;
+        rollTo(sx,rockPos.y,rockRest.x,rockRest.y,2600);
+      }
+    }
+    rock.addEventListener("pointerup",rockUp);
+    rock.addEventListener("pointercancel",rockUp);
+
+    boat.addEventListener("pointerdown",ev=>{
+      ev.preventDefault(); boat.classList.add("dragging"); boat.setPointerCapture(ev.pointerId);
+      boatAnim=null; boatLanded=true; const p=pt(ev); boatDrag={dx:boatPos.x-p.x,dy:boatPos.y-p.y};
+    });
+    boat.addEventListener("pointermove",ev=>{
+      if(!boatDrag) return; const p=pt(ev);
+      boatPos.x=p.x+boatDrag.dx; boatPos.y=p.y+boatDrag.dy;
+    });
+    function boatUp(ev){
+      if(!boatDrag) return; boatDrag=null; boat.classList.remove("dragging");
+      try{boat.releasePointerCapture(ev.pointerId)}catch(e){}
+      boatLanded=false;   // remain where dropped, keep rocking in place
+    }
+    boat.addEventListener("pointerup",boatUp);
+    boat.addEventListener("pointercancel",boatUp);
+  }
+
+  function tick(t){
+    drawWater(t); layoutWaterline(t);
+    if(rockAnim) rockAnim(t);
+    if(boatAnim) boatAnim(t);
+    layoutObjects(t);
+  }
+  return {build,enter,tick,sec};
+}
+
+/* ============================================================= SCENE 2 */
+function Scene2(){
+  const sec=document.getElementById("s2");
+  const svg=document.getElementById("art2");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  let W,H,waterY,hillX0,hillX1, entered=false;
+  let boat,rock,waterline,hill,curls=[];
+  let boatX=0, boatHome=0, boatAnim=null, rockPos={x:0,y:0,rot:0}, rockAnim=null;
+
+  // a hill on the RIGHT that rises to the right, so the left half stays clear for copy
+  function hillSurf(x){
+    const t=clamp((x-hillX0)/(hillX1-hillX0),0,1);
+    return lerp(waterY, H*0.28, easeInOut(t));
+  }
+  function build(){
+    W=sec.clientWidth;H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    waterY=H*0.66;
+    hillX0=W*0.62; hillX1=W*1.06;
+    const pts=[]; for(let x=hillX0;x<=Math.min(hillX1,W+40);x+=W/60) pts.push([x,hillSurf(x)]);
+    hill=el("path",{d:smoothPath(pts),fill:"none",stroke:INK,"stroke-width":1.6,"stroke-linecap":"round"});
+    svg.append(hill);
+    waterline=el("path",{fill:"none",stroke:INK,"stroke-width":1.4,"stroke-linecap":"round"});
+    svg.append(waterline);
+    // wind curls (line-art) drifting in the centre-right, above the water
+    curls=[];
+    const spots=[[W*0.46,H*0.26],[W*0.55,H*0.19],[W*0.52,H*0.40],[W*0.60,H*0.33]];
+    spots.forEach(s=>{
+      const c=el("path",{fill:"none",stroke:SOFT,"stroke-width":1.3,"stroke-linecap":"round",opacity:.6});
+      c._x=s[0];c._y=s[1];c._sc=0.8+Math.random()*0.5;c._ph=Math.random()*6.28;
+      curls.push(c);svg.append(c);
+    });
+    rock=makeRock(16);svg.append(rock);
+    boat=makeBoat(1.25);svg.append(boat);
+    boatHome=W*0.42;
+    boatX=entered?boatHome:-90;
+    rockPos={x:entered?W*0.66:W*0.94, y:0, rot:0}; rockPos.y=hillSurf(rockPos.x)-16;
+    boatAnim=null;rockAnim=null;
+  }
+  function drawWindWater(t){
+    ctx.clearRect(0,0,W,H);
+    ctx.font="12px 'Roboto Mono',monospace";ctx.textBaseline="top";
+    // wind ascii drift (centre-right band, above the water, matching the curls)
+    const wy0=H*0.15, wy1=H*0.48, x0=W*0.40, x1=W*0.66, chH=15;
+    for(let y=wy0;y<wy1;y+=chH){
+      const row=(y-wy0)/chH;
+      for(let x=x0;x<x1;x+=9){
+        const drift=(x - t*0.055*(1+row*0.2));
+        const p=Math.sin(drift*0.03 + row);
+        let ch; if(p>0.9) ch="~"; else if(p>0.6) ch="⌒"; else continue;
+        const a=(1-(y-wy0)/(wy1-wy0))*0.28;
+        ctx.fillStyle=`rgba(107,101,85,${a.toFixed(3)})`;
+        ctx.fillText(ch,x,y);
+      }
+    }
+    // water ascii below waterline (full width)
+    const rows=Math.ceil((H-waterY)/13)+1;
+    for(let r=0;r<rows;r++){const y=waterY+r*13;const depth=r/rows;const alpha=(1-depth)*0.45;if(alpha<=0.02)continue;
+      for(let x=0;x<W;x+=9){const p=Math.sin(x*0.02+t*0.0022+r*0.55)+0.6*Math.cos(x*0.011-t*0.0013+r*0.3);
+        let ch;if(p>0.95)ch="≈";else if(p>0.12)ch="~";else continue;
+        ctx.fillStyle=`rgba(59,56,48,${(alpha*(ch==="≈"?1:0.85)).toFixed(3)})`;ctx.fillText(ch,x,y);}}
+  }
+  function layoutWaterline(t){
+    let d="M0 "+waterY.toFixed(1);
+    for(let x=0;x<=W;x+=W/40){const y=waterY+Math.sin(x*0.03+t*0.0016)*3+Math.sin(x*0.013-t*0.0011)*2;d+="L"+x.toFixed(1)+" "+y.toFixed(1);}
+    waterline.setAttribute("d",d);
+    curls.forEach(c=>{
+      const rot=Math.sin(t*0.0009+c._ph)*10;
+      const drift=Math.sin(t*0.0006+c._ph)*12;
+      const s=c._sc;
+      const dd=`M ${-26*s} 0 q ${16*s} ${-14*s} ${30*s} ${-2*s} q ${12*s} ${10*s} ${2*s} ${14*s} q ${-8*s} ${3*s} ${-9*s} ${-6*s}`;
+      c.setAttribute("d",dd);
+      c.setAttribute("transform",`translate(${(c._x+drift).toFixed(1)} ${c._y.toFixed(1)}) rotate(${rot.toFixed(1)})`);
+    });
+  }
+  function layoutObjects(t){
+    const by=waterY+Math.sin(t*0.0026+boatX*0.01)*4;
+    const brot=Math.sin(t*0.0026+boatX*0.01+0.6)*4;
+    setXY(boat,boatX,by,brot);
+    setXY(rock,rockPos.x,rockPos.y,rockPos.rot);
+  }
+  function enter(){
+    if(entered)return;entered=true;
+    // rock rolls down the right hill toward the water
+    const fx=W*0.94,fy=hillSurf(W*0.94)-16,tx=W*0.66,ty=hillSurf(W*0.66)-16;
+    const t0=now(),dur=1800,dist=Math.hypot(tx-fx,ty-fy);
+    rockAnim=(t)=>{const k=clamp((t-t0)/dur,0,1),e=easeOut(k);
+      rockPos.x=lerp(fx,tx,e);rockPos.x=clamp(rockPos.x,hillX0,hillX1);rockPos.y=hillSurf(rockPos.x)-16;
+      rockPos.rot=-(dist/(16*2*Math.PI)*360)*e; if(k>=1)rockAnim=null;};
+    // boat sails in on the wind, left -> home
+    const bx0=-90,tt0=now(),bdur=2600;
+    boatAnim=(t)=>{const k=clamp((t-tt0)/bdur,0,1);boatX=lerp(bx0,boatHome,easeInOut(k));if(k>=1)boatAnim=null;};
+  }
+  function tick(t){drawWindWater(t);layoutWaterline(t);if(rockAnim)rockAnim(t);if(boatAnim)boatAnim(t);layoutObjects(t);}
+  return {build,enter,tick,sec};
+}
+
+/* ============================================================= SCENE 3 */
+function Scene3(){
+  const sec=document.getElementById("s3");
+  const svg=document.getElementById("art3");
+  const cv=sec.querySelector("canvas.ascii");
+  const ctx=cv.getContext("2d");
+  let W,H,groundY,entered=false;
+  let ground,balls=[],paper,paperAnim=null;
+  // pyramid of company-circles
+  const R=20;
+  let targets=[];
+  function build(){
+    W=sec.clientWidth;H=sec.clientHeight;
+    const dpr=Math.min(2,devicePixelRatio||1);cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    groundY=H*0.62;
+    ground=el("path",{fill:"none",stroke:INK,"stroke-width":1.5,"stroke-linecap":"round"});
+    svg.append(ground);
+    // pyramid: rows of 4,3,2,1 near right-center
+    const cx=W*0.66, base=groundY-R;
+    targets=[];
+    const rowsN=[4,3,2,1];
+    rowsN.forEach((n,row)=>{
+      const rowY=base-row*(R*1.72);
+      const rowW=(n-1)*(R*2.05);
+      for(let i=0;i<n;i++){
+        targets.push({x:cx-rowW/2+i*(R*2.05), y:rowY});
+      }
+    });
+    balls=targets.map((tg,i)=>{
+      const c=el("circle",{cx:tg.x,cy:entered?tg.y:-40,r:R,fill:SOFT});
+      svg.append(c); return {c,tg,delay:i*90,anim:null};
+    });
+    // small paper boat tipping off the left edge of the ground line
+    paper=el("path",{d:`M -22 0 L 22 0 L 12 14 L -12 14 Z M 0 0 L 0 -18 L 16 -2 Z`,
+        fill:"none",stroke:INK,"stroke-width":2,"stroke-linejoin":"round"});
+    svg.append(paper);
+    paper._x=W*0.90; paper._y=groundY-8;
+    setPaper(0);
+  }
+  function setPaper(rot){ paper.setAttribute("transform",`translate(${paper._x.toFixed(1)} ${paper._y.toFixed(1)}) rotate(${rot})`); }
+  function drawText(t){
+    // faint ascii ground shimmer under the pile
+    ctx.clearRect(0,0,W,H);
+    ctx.font="12px 'Roboto Mono',monospace";ctx.textBaseline="top";
+    for(let x=0;x<W;x+=9){
+      const p=Math.sin(x*0.05+t*0.001);
+      if(p>0.7){ctx.fillStyle="rgba(160,149,127,0.25)";ctx.fillText("·",x,groundY+6);}
+    }
+  }
+  function layoutGround(t){
+    let d="M0 "+groundY.toFixed(1);
+    for(let x=0;x<=W;x+=W/30){const y=groundY+Math.sin(x*0.02+t*0.0008)*1.2;d+="L"+x.toFixed(1)+" "+y.toFixed(1);}
+    ground.setAttribute("d",d);
+  }
+  function enter(){
+    if(entered)return;entered=true;
+    balls.forEach(b=>{
+      const t0=now()+b.delay, fromY=-40;
+      b.anim=(t)=>{const k=clamp((t-t0)/700,0,1);if(k<=0){b.c.setAttribute("cy",fromY);return;}
+        const e=easeOut(k); const y=lerp(fromY,b.tg.y,e);
+        b.c.setAttribute("cy",y.toFixed(1)); if(k>=1)b.anim=null;};
+    });
+    // paper boat tips over the edge
+    const t0=now()+900;
+    paperAnim=(t)=>{const k=clamp((t-t0)/900,0,1);if(k<=0)return;
+      paper._x=lerp(W*0.90,W*0.985,k); paper._y=lerp(groundY-8,groundY+10,easeInOut(k));
+      setPaper(k*40); if(k>=1)paperAnim=null;};
+  }
+  function tick(t){
+    drawText(t);layoutGround(t);
+    balls.forEach(b=>b.anim&&b.anim(t));
+    if(paperAnim)paperAnim(t);
+  }
+  return {build,enter,tick,sec};
+}
+
+/* ---------- driver ---------- */
+const scenes=[Scene1(),Scene2(),Scene3()];
+const active=new Set();
+function buildAll(){ scenes.forEach(s=>s.build()); }
+buildAll();
+addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(buildAll,180); });
+
+const io=new IntersectionObserver((ents)=>{
+  ents.forEach(e=>{
+    const s=scenes.find(sc=>sc.sec===e.target);
+    if(!s) return;
+    if(e.isIntersecting){ active.add(s); if(e.intersectionRatio>0.35) s.enter(); }
+    else active.delete(s);
+  });
+},{threshold:[0,0.35,0.6]});
+scenes.forEach(s=>io.observe(s.sec));
+
+let last=now();
+function loop(t){
+  active.forEach(s=>s.tick(t));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

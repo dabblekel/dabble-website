@@ -1,0 +1,62 @@
+name: Publish site
+
+# Rebuilds the site and publishes it to GitHub Pages whenever the main copy
+# changes. Merging an edit into "main" is what triggers this - no one has to
+# run the build by hand. You can also start it yourself from the Actions tab
+# with the "Run workflow" button.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the image library
+        run: python -m pip install --upgrade pip pillow
+
+      - name: Build the site
+        working-directory: hero-peel
+        run: python3 build.py
+
+      - name: Gather just the published files
+        run: |
+          mkdir _site
+          cp hero-peel/*.html _site/
+          cp hero-peel/content-manifest.json _site/ 2>/dev/null || true
+          cp -r hero-peel/assets _site/assets
+
+      - name: Package for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

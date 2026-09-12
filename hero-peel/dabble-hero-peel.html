@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dabble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#050506;overflow:hidden;touch-action:none}
+  body{cursor:grab;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;
+       font-family:'Syne','Inter',Helvetica,Arial,sans-serif}
+  body.hold{cursor:grabbing}
+  .hero{position:fixed;inset:0;overflow:hidden;perspective:1400px;
+      background:radial-gradient(60% 50% at 50% 50%,#111116 0%,#040405 75%)}
+  .world{position:absolute;inset:0;transform-style:preserve-3d;
+      transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  /* The shadow is kept tight on purpose. A 60px blur under thirty pictures is
+     re-blurred every frame as they move in depth, and it was the single largest
+     cost in the drift; at 26px it still separates overlapping pictures. */
+  .ph{position:absolute;left:50%;top:50%;transform-style:preserve-3d;
+      opacity:0;transition:opacity 1.4s ease;
+      box-shadow:0 10px 26px rgba(0,0,0,.72)}
+  .ph.in{opacity:1}
+  /* Depth is cued by veiling the far pictures rather than by a brightness filter.
+     Opacity rides on the compositor; a filter forces a repaint of every element
+     that crosses the threshold. */
+  .ph img{display:block;width:100%;height:auto;opacity:.93;transition:opacity .7s ease}
+  .ph.near img{opacity:1}
+  .ring{position:absolute;left:50%;top:50%;z-index:850;pointer-events:none;
+      width:min(74vmin,760px);aspect-ratio:1;transform:translate(-50%,-50%);
+      border:1px solid rgba(255,255,255,.10);border-radius:50%;
+      opacity:0;animation:ringIn 2.4s 1s ease forwards}
+  @keyframes ringIn{to{opacity:1}}
+  .scrim{position:absolute;inset:0;z-index:880;pointer-events:none;
+      background:radial-gradient(ellipse 40% 26% at 50% 50%,rgba(0,0,0,.6),rgba(0,0,0,0) 70%)}
+  .title{position:absolute;inset:0;z-index:900;display:grid;place-items:center;pointer-events:none;padding:8vw}
+  .title h1 span{white-space:pre}
+  .title h1{font-weight:800;color:#fff;text-align:center;
+      line-height:.95;font-size:clamp(2.2rem,7vw,7rem);letter-spacing:-.02em;
+      text-shadow:0 0 90px rgba(0,0,0,.8);
+      transform:scale(.86);opacity:0;animation:pop 1.7s .3s cubic-bezier(.16,.9,.2,1) forwards}
+  @keyframes pop{to{transform:scale(1);opacity:1}}
+  .hint{position:absolute;left:0;right:0;bottom:clamp(18px,4.4vh,42px);z-index:960;text-align:center;
+      font-weight:600;font-size:10px;letter-spacing:.32em;text-transform:uppercase;
+      color:rgba(255,255,255,.42);pointer-events:none;opacity:0;
+      animation:hintIn 1s 3s forwards,hintOut 1.4s 14s forwards}
+  @keyframes hintIn{to{opacity:1}} @keyframes hintOut{to{opacity:0}}
+
+  body,.title h1,button{font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace}
+  .title h1{font-weight:700;letter-spacing:-.045em;line-height:1.0}
+  .hint{font-weight:400;letter-spacing:.24em;font-size:9.5px}
+  .ring{animation:none;opacity:0}
+
+  /* THE SKY — an opaque ramp from night to a pale horizon, plus a falloff that
+     darkens one end of the horizon so the light is never symmetrical. */
+  .dawn{position:fixed;left:100%;top:100%;z-index:984;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  /* THE SUN — laid over the sky with alpha only. Normal compositing keeps the orange
+     truly orange (screen blending can't remove the sky's blue, so it goes pink). */
+  .glow{position:fixed;left:0;top:0;z-index:985;transform-origin:0 0;will-change:transform;
+      pointer-events:none;opacity:0}
+  /* a whisper of noise so the sky dithers instead of banding */
+  .grain{position:fixed;inset:0;z-index:987;pointer-events:none;mix-blend-mode:overlay;opacity:0;
+      transition:opacity .9s ease;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+      background-size:140px 140px}
+
+  /* The cream underside. It is a huge rectangle rotated onto the fold rather than a
+     full-screen box with an animated clip-path — moving it is then pure compositing,
+     with no repaint at all. Its text lives in an upright layer above it. */
+  .paper{position:fixed;left:100%;top:100%;z-index:990;transform-origin:0 0;will-change:transform;
+      background:linear-gradient(180deg,#e9e4da 0px,#fbf8f2 760px,#f5f1e9 1800px)}
+  /* The hero's body is user-select:none; a sub-page's is not, because a bio should be
+     copyable. The nav is not text to copy, though, and dragging the peel open runs
+     straight through it - so the list opts out here, where both pages share it. */
+  .under{position:fixed;inset:0;z-index:991;pointer-events:none;
+      -webkit-user-select:none;user-select:none}
+  .under.live ol{pointer-events:auto}
+  .under ol{pointer-events:none;list-style:none;position:absolute;right:clamp(26px,4.4vw,64px);bottom:clamp(26px,4.6vh,60px);
+      text-align:right;display:grid;gap:clamp(6px,1.4vh,14px)}
+  .under li{font-family:'Roboto Mono',monospace;font-weight:500;text-transform:uppercase;
+      letter-spacing:.02em;line-height:1;color:#12120f;cursor:pointer;
+      font-size:clamp(1rem,2.9vw,2.35rem)}
+  .under li span{display:inline-block;transition:transform .28s cubic-bezier(.2,.8,.2,1),color .2s ease}
+  .under li:hover span{transform:translateX(-14px);color:#e4581a}
+  .under .credit{position:absolute;right:clamp(26px,4.4vw,64px);top:clamp(26px,4.6vh,60px);
+      font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(20,20,16,.42);
+      text-align:right;line-height:2}
+  .fold{position:fixed;z-index:995;left:100%;top:100%;height:1px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0}
+
+  /* the sun's limb: a hot line on the horizon exactly over the sun's centre, plus a
+     softer bloom under it. Both ride the fold and taper to nothing at each end. */
+  /* The sun's limb. Both lines are a fixed size and are moved only by transform —
+     animating left/width would force a layout (and a re-blur) on every frame, which is
+     what makes a compositor shed half-drawn tiles. The soft one gets its falloff from a
+     gradient and a mask instead of a filter, so nothing has to be re-blurred at all. */
+  .limbGlow{position:fixed;left:0;top:0;z-index:988;height:26px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;
+      background:linear-gradient(0deg,rgba(255,152,36,.92),rgba(255,126,20,.55) 34%,rgba(255,110,10,0) 100%)}
+  .limb{position:fixed;left:0;top:0;z-index:989;height:3px;will-change:transform;
+      transform-origin:0 0;pointer-events:none;opacity:0;filter:blur(1px)}
+
+  /* The mark that asks for the lift. It used to be a white triangle filling the corner;
+     it is an info mark now, set in from the two edges. The drawing comes from the SVGs in
+     hero-peel/ - white here, black on a cream sub-page - so the shape is edited in
+     Illustrator, not in CSS. The patch that opens the peel is still the whole corner
+     band, so the mark is a sign rather than the only target. */
+  .dog{position:fixed;right:clamp(20px,2.4vw,34px);bottom:clamp(18px,2.4vh,30px);z-index:940;
+      cursor:pointer;width:clamp(26px,2.6vw,36px);line-height:0}
+  .dog img{display:block;width:100%;height:auto;pointer-events:none}
+
+  /* ---- a picture you can open ---- */
+  .ph{cursor:pointer}
+  .ph img{transition:filter .4s ease,opacity .7s ease}
+  .ph.hot img{filter:brightness(.62) saturate(.92) contrast(1.03)}
+  .ph.hot img{opacity:1}
+  .ph.hot{box-shadow:0 0 0 1px rgba(255,255,255,.6),
+      0 0 34px 4px rgba(255,178,84,.34),0 34px 90px rgba(0,0,0,.75)}
+  /* hidden rather than transparent: a transparent overlay on all 30 pictures still
+     gets painted every frame, and it shows up in the frame budget */
+  .cap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+      padding:.62em;opacity:0;visibility:hidden;pointer-events:none;
+      transition:opacity .32s ease,visibility 0s linear .32s;
+      background:linear-gradient(0deg,rgba(6,6,10,.72) 0%,rgba(6,6,10,.34) 44%,rgba(6,6,10,0) 78%)}
+  .ph.hot .cap{opacity:1;visibility:visible;transition:opacity .32s ease,visibility 0s}
+  .cap .kick{font-size:.34em;letter-spacing:.22em;text-transform:uppercase;font-weight:500;
+      color:rgba(255,255,255,.72);margin-bottom:.5em}
+  .cap .q{font-size:.82em;line-height:1.16;font-weight:500;color:#fff;letter-spacing:-.01em;
+      text-shadow:0 2px 14px rgba(0,0,0,.7)}
+
+  /* ---- the story it opens into ---- */
+  .ovl{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:clamp(14px,3vh,44px);
+      background:rgba(4,5,9,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      opacity:0;pointer-events:none;transition:opacity .4s ease}
+  .ovl.on{opacity:1;pointer-events:auto}
+  .card{width:min(920px,100%);max-height:100%;background:#f3efe7;color:#14140f;
+      display:flex;flex-direction:column;overflow:hidden;position:relative;
+      box-shadow:0 50px 140px rgba(0,0,0,.6)}
+  .cardScroll{overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
+  .card .shot{display:block;width:100%;height:clamp(190px,32vh,340px);object-fit:cover;background:#ddd8cd}
+  .card .body{padding:clamp(22px,4vw,46px)}
+  .card .kick{display:block;font-size:10px;letter-spacing:.32em;text-transform:uppercase;
+      color:#9a8f7c;margin-bottom:1.1em}
+  .card h2{font-size:clamp(1.35rem,3.3vw,2.3rem);line-height:1.14;letter-spacing:-.035em;
+      font-weight:500;margin-bottom:.9em;max-width:22ch}
+  .card p{font-size:clamp(13px,1.05vw,14.5px);line-height:1.85;color:#3b3830;
+      max-width:64ch;margin-bottom:1.5em}
+  .card .body a{color:#14140f;text-decoration:underline;text-decoration-color:#b5ac9b;
+      text-underline-offset:2px;transition:text-decoration-color .2s}
+  .card .body a:hover{text-decoration-color:#14140f}
+  /* Supporting images are the work, not a contact sheet: each runs the full width of
+     the column at its own proportions, with nothing cropped away, and carries a caption
+     under it. Height comes from the width and the img's own width/height attributes, so
+     the card does not jump as each one loads. */
+  .card .plate{margin:0 0 1.9em}
+  .card .plate img{display:block;width:100%;height:auto;background:#ddd8cd}
+  .card .plate figcaption{font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+      color:#a0957f;line-height:1.9;margin-top:.95em}
+  /* the carousel - the extra images from supporting/carousel/, matching the gallery pages */
+  .caro{margin:0 0 1.9em;user-select:none}
+  .caroStage{position:relative;background:#ddd8cd;overflow:hidden}
+  .caroTrack{display:flex;transition:transform .42s cubic-bezier(.2,.8,.2,1)}
+  .caroSlide{min-width:100%;display:flex;align-items:center;justify-content:center;
+      height:clamp(240px,52vh,560px)}
+  .caroSlide img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+  .caroBtn{position:absolute;top:50%;transform:translateY(-50%);z-index:2;appearance:none;
+      border:0;cursor:pointer;width:44px;height:64px;background:rgba(243,239,231,.86);
+      color:#14140f;font-size:20px;line-height:1;
+      transition:background .2s ease,color .2s ease,opacity .2s ease}
+  .caroBtn:hover{background:#14140f;color:#f3efe7}
+  .caroBtn.prev{left:0} .caroBtn.next{right:0}
+  .caroBtn[disabled]{opacity:0;pointer-events:none}
+  .caroBar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:.95em}
+  .caroCap{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#a0957f;
+      line-height:1.9;flex:1}
+  .caroNum{font-size:10px;letter-spacing:.24em;color:#a0957f;white-space:nowrap}
+  .card .meta{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#a0957f;
+      border-top:1px solid rgba(20,20,15,.12);padding-top:1.4em}
+  .x{position:absolute;top:0;right:0;z-index:3;appearance:none;border:0;cursor:pointer;
+      background:rgba(243,239,231,.9);backdrop-filter:blur(6px);color:#14140f;font-family:inherit;
+      font-size:10px;letter-spacing:.26em;text-transform:uppercase;padding:14px 18px;
+      transition:background .2s ease,color .2s ease}
+  .x:hover{background:#14140f;color:#f3efe7}
+
+  /* brand mark, bottom left — the peel now stops short of it */
+  .logo{position:fixed;left:clamp(18px,3vw,40px);bottom:clamp(16px,3vh,34px);z-index:1000;
+      width:clamp(96px,10.5vw,148px);pointer-events:none}
+  .logo img{display:block;width:100%;height:auto;position:absolute;left:0;bottom:0}
+  .logo img.b{opacity:0}
+  /* The spacer is what gives the box its height — it has to stay in flow, or the
+     mark measures as zero-high and the white→black flip tests the wrong point. */
+  .logo .spacer{position:static;display:block;width:100%;visibility:hidden}
+
+  .back{position:fixed;left:clamp(18px,3vw,40px);top:clamp(18px,3vh,40px);z-index:1000;
+      font-family:'Roboto Mono',monospace;font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+      color:rgba(255,255,255,.5);pointer-events:none;opacity:0;transition:opacity .5s ease}
+  .back.on{opacity:1}
+
+</style>
+</head>
+<body>
+<div class="hero" id="hero">
+  <div class="world" id="world"></div>
+  <div class="ring" id="ring"></div>
+  <div class="scrim"></div>
+  <div class="title" id="titleWrap"><h1 id="title">What&rsquo;s your<br>what if?</h1></div>
+
+  <div class="dawn" id="dawn"></div>
+  <div class="glow" id="glow"></div>
+  <div class="grain" id="grain"></div>
+  <div class="paper" id="paper"></div>
+  <div class="under" id="under">
+    <div class="credit" id="credit"></div>
+    <ol id="underList"></ol>
+  </div>
+  <div class="limbGlow" id="limbGlow"></div>
+  <div class="fold" id="fold"></div>
+  <div class="limb" id="limb"></div>
+  <div class="dog" id="dog" title="lift"></div>
+  <div class="back" id="back"></div>
+  <div class="logo" id="logo"></div>
+  <div class="ovl" id="ovl">
+    <article class="card" id="card">
+      <button class="x" id="x">Close</button>
+      <div class="cardScroll">
+        <img class="shot" id="cShot" alt="">
+        <div class="body">
+          <span class="kick" id="cKick"></span>
+          <h2 id="cQ"></h2>
+          <div id="cCopy"></div>
+          <div id="cCaro"></div>
+          <div class="meta" id="cMeta"></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="hint" id="hint"></div>
+</div>
+<script>
+const IMAGES = [{"id": 0, "w": 1024, "h": 510, "src": "assets/paperboy/main.jpg"}, {"id": 1, "w": 983, "h": 1280, "src": "assets/sunny%20ears/main.jpg"}, {"id": 2, "w": 1280, "h": 853, "src": "assets/pixar%20lab.ble/main.jpg"}, {"id": 3, "w": 1280, "h": 853, "src": "assets/illuminate/main.jpg"}, {"id": 4, "w": 1280, "h": 720, "src": "assets/fate%20matchbooks/main.jpg"}, {"id": 5, "w": 1200, "h": 1133, "src": "assets/lagu%20hantu/main.jpg"}, {"id": 6, "w": 1280, "h": 854, "src": "assets/awty/main.jpg"}, {"id": 7, "w": 1280, "h": 853, "src": "assets/desa-kala-patra/main.jpg"}, {"id": 8, "w": 960, "h": 1280, "src": "assets/light%20play/main.jpg"}, {"id": 9, "w": 1280, "h": 854, "src": "assets/understanding%20understanding/main.jpg"}, {"id": 10, "w": 1280, "h": 853, "src": "assets/when%20is%20now%3F/main.jpg"}, {"id": 11, "w": 720, "h": 1280, "src": "assets/PS%20I%20love%20you/main.jpg"}];
+const PAGES = ["Stories","Dabblers","Our Team","About","Contact"];
+
+/* ---- headline kerning -------------------------------------------------------------
+   Roboto Mono is monospaced: every glyph gets the same advance width, so the apostrophe
+   sits alone in a cell as wide as a W while w and h nearly fill theirs. There are no kern
+   pairs in the font, and letter-spacing moves every pair at once, so the only way to fix
+   one pair without disturbing the rest is to nudge it by hand.
+
+   Each key is a character PAIR; the value shifts the second character, in em. Negative
+   pulls the pair together, positive opens it. Case matters - "Wh" and "wh" are separate.
+   Edit the numbers here; nothing else needs to change.                                  */
+const KERN = {
+  "t\u2019":  -0.16,   // What's  - close the gap before the apostrophe
+  "\u2019s":  -0.16,   // What's  - and after it
+  "Wh":   0.055,   // What's  - give the capital W room against the h
+  "wh":   0.055,   // what if - same, lowercase
+  "ha":   0.020    // both words
+};
+
+(function kernHeadline(){
+  const h = document.getElementById('title');
+  if(!h) return;
+  [...h.childNodes].forEach(n=>{
+    if(n.nodeType !== 3) return;                    // leave the <br> alone
+    const t = n.nodeValue, frag = document.createDocumentFragment();
+    for(let i=0; i<t.length; i++){
+      const sp = document.createElement('span');
+      sp.textContent = t[i];
+      const k = KERN[(i ? t[i-1] : '') + t[i]];
+      if(k) sp.style.marginLeft = k + 'em';
+      frag.appendChild(sp);
+    }
+    h.replaceChild(frag, n);
+  });
+})();
+const hero=document.getElementById('hero'), world=document.getElementById('world');
+const rand=(a,b)=>a+Math.random()*(b-a);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const narrow=innerWidth<720;
+const GOLD=Math.PI*(3-Math.sqrt(5));
+
+const nodes=[];
+const N = narrow?18:30;
+const bag=shuffle(IMAGES);
+const minSide=Math.min(innerWidth,innerHeight);
+
+for(let i=0;i<N;i++){
+  const d=bag[i%bag.length];
+  const el=document.createElement('div'); el.className='ph';
+  const long=(narrow?rand(30,46):rand(15,26));
+  el.style.width=(d.w>=d.h? long : long*(d.w/d.h))+'vw';
+  el.innerHTML='<img src="'+d.src+'" alt="" draggable="false">';
+  world.appendChild(el);
+  nodes.push({el,i,img:d, a:i*GOLD, rad:Math.sqrt((i+1)/N)*minSide*(narrow?.78:1.02),
+              z:rand(-460,240), spin:rand(-9,9), push:0, lift:0});
+  setTimeout(()=>el.classList.add('in'), 340*i);
+}
+
+/* Shared bloom state — nav layers read and nudge these. */
+const HERO={nodes,minSide,narrow,PAGES,dt:1,rot:0,dive:0,held:false,slow:0,dir:1,rotOffset:0,diveOnHold:true,wheelLocked:false,
+            extraDive:0,frame:[],x:0,y:0,freeze:false};
+
+let rot=0, speed=0.0016, tiltX=0, tiltY=0, curX=0, curY=0, dive=0, held=false;
+
+addEventListener('pointermove',e=>{
+  HERO.x=e.clientX; HERO.y=e.clientY;
+  tiltY=(e.clientX/innerWidth-.5)*22;
+  tiltX=-(e.clientY/innerHeight-.5)*18;
+},{passive:true});
+addEventListener('pointerdown',()=>{held=true;document.body.classList.add('hold')});
+addEventListener('pointerup',()=>{held=false;document.body.classList.remove('hold')});
+addEventListener('wheel',e=>{ if(HERO.wheelLocked) return;   // something else is scrolling
+  e.preventDefault(); speed += e.deltaY*0.000012},{passive:false});
+
+/* Everything below is measured in real time, not in frames. A frame that arrives
+   late then advances the wheel further, so a hitch reads as a moment of motion
+   rather than a stall-and-jump, and the drift runs at the same speed on a 60Hz
+   panel as on a 120Hz one. Long gaps are clamped so a backgrounded tab does not
+   teleport the scene on return. */
+let last=performance.now();
+HERO.ease=k=>1-Math.pow(1-k,HERO.dt);
+
+function frame(now){
+  const t=now||performance.now();
+  HERO.dt=Math.min(Math.max(t-last,4),50)/16.667; last=t;
+  const E=HERO.ease;
+  dive += ((((held&&HERO.diveOnHold)?1:0)+HERO.extraDive) - dive)*E(0.07);
+  dive = Math.min(dive, 1.6);
+  const target=((held&&HERO.diveOnHold)?0.0072:0.0016)*(1-HERO.slow);
+  speed += (target-speed)*E(0.03);
+  /* HERO.freeze stops the wheel dead rather than easing it down. A nav layer sets it
+     while the bloom is hidden, so the field is exactly where it was left when it
+     returns - HERO.slow only decays the speed, which still creeps. */
+  if(!HERO.freeze) rot += speed*HERO.dir*HERO.dt;
+  curX += (tiltX-curX)*E(0.06); curY += (tiltY-curY)*E(0.06);
+  HERO.rot=rot; HERO.dive=dive; HERO.held=held; HERO.tiltX=curX; HERO.tiltY=curY;
+  world.style.transform=`rotateX(${curX}deg) rotateY(${curY}deg) translateZ(${dive*180}px)`;
+  nodes.forEach((n,i)=>{
+    const a=n.a+rot+HERO.rotOffset;
+    const r=n.rad*(1-dive*0.28)*(1+n.push);
+    const x=Math.cos(a)*r*(narrow?1:1.28), y=Math.sin(a)*r*(narrow?.9:.74);
+    const z=n.z + dive*260 + n.lift + Math.sin(rot*2+i)*26;
+    n.nx=x; n.ny=y;                        // natural position, before any nudge
+    const ox=n.ox||0, oy=n.oy||0;          // a per-picture nudge, used when one is picked up
+    n.el.style.transform=`translate(-50%,-50%) translate3d(${x+ox}px,${y+oy}px,${z}px) rotate(${Math.sin(a)*n.spin}deg)`;
+    /* A gap between the on and off points, so a picture hovering at the threshold
+       does not sit there flickering between the two states. */
+    const nr = n.near ? z>48 : z>72;
+    if(nr!==n.near){ n.near=nr; n.el.classList.toggle('near', nr) }
+    n.sx=innerWidth/2+x+ox; n.sy=innerHeight/2+y+oy; n.sz=z;
+  });
+  HERO.frame.forEach(f=>f());
+  requestAnimationFrame(frame);
+}
+frame();
+
+/* H — the hero is a sheet of paper. Lift the corner and the menu is printed underneath;
+   the splash stills and fades, and what is left behind is a sunrise on the fold. */
+const LOGO = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTk0Mi4yLDU0OS43Yy0xMjAuMDUsMC0yMTcuODMsOTYuOTktMjE3LjgzLDIxNy4wMywwLDY5LjQ3LDMyLjc1LDEzMS40OSw4My42MSwxNzEuNDEsMTguMDgtMTUuODMsNDAuNTMtMjUuODgsNjQuMTktMjguNzctNTIuNTktMjYuMDEtODguOTctODAuMjgtODguOTctMTQyLjY0LDAtODcuNDUsNzEuNTUtMTU4LjIsMTU5LTE1OC4yczE1OC4yLDcwLjc1LDE1OC4yLDE1OC4yLTY3LjQ3LDE1NS42My0xNTIuMDcsMTU4Ljg4YzIwLjQzLDEyLjE3LDM2LjgzLDMwLjUxLDQ2LjkyLDUyLjM4LDQwLjc2LTEwLjI2LDc3LjExLTMyLjA3LDEwNS4xNS02MS44djY0LjRoNTguODN2LTIxMy44NmMwLTEyMC4wNC05Ni45OS0yMTcuMDMtMjE3LjAzLTIxNy4wM1oiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNMTEwMC40LDEwMTYuMTFoNTguOHYyNzQuNTZjMCw4Ny42MSw3MC43NSwxNTguMzYsMTU4LjM2LDE1OS4wNnY1OC44Yy0xMjAuMTgsMC0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzQuMzJaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTE1MDUuOTcsMTQ0Ni42OWMxMC4zMSwxLjY0LDIwLjYyLDMuMjgsMzAuOTIsMy4yOCw3Ny4zMSwwLDE0MS43My01NS43NSwxNTYuMDItMTI5Ljc4aDU5Ljc0Yy0xNC4yOSwxMDYuNTktMTA1Ljg5LDE4OC41OC0yMTUuNzYsMTg4LjU4LTEyMC4xOCwwLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xczk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjOTIuMywwLDE3MS45NSw1Ny4zOSwyMDIuODcsMTM5LjM5bC0yMzMuNzksMjMzLjc5Wk0xNDQ3Ljg4LDE0MjEuODZsMjIwLjQ0LTIyMC40NGMtMjguNTgtNDEuNDYtNzcuMzEtNjkuMzQtMTMxLjQyLTY5LjM0LTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzYsMCw1NS4wNSwyNy44OCwxMDIuODQsNzAuMDQsMTMxLjQyWiIvPgo8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik02ODIuNjEsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2NS40NSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTEyMDAuOCw0OTEuMjNoNTguOHYxMjYuNWMzOS44Mi00Mi4xNyw5Ni4yOC02OC40LDE1OC4zNi02OC40LDEyMC44OCwwLDIxOC4xLDk2Ljk4LDIxOC4xLDIxNy4xNnMtOTYuOTgsMjE4LjEtMjE4LjEsMjE4LjEtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc1LjI2aDBaTTEyNTkuNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNOTY5LjM2LDExMTQuMjZjLTMuMjYtMi4zNi02LjU5LTQuNjItOS45OS02Ljc5LDAtLjAxLS4wMS0uMDEtLjAxLS4wMS0uMDguMDctLjE2LjE1LS4yNS4yMi0zLjA3LDIuOC02LjMxLDUuNDItOS43LDcuODQtMTEuNzIsOC40LTI1LjE3LDE0LjQ3LTM5LjY5LDE3LjU5LS42My4xNS0xLjI3LjI4LTEuOTEuNC0uMzUuMDYtLjcuMTMtMS4wNS4yLS42Ni4xMy0xLjM0LjI1LTIuMDEuMzYtLjgzLjE0LTEuNjUuMjctMi40OC4zOS0uODEuMTEtMS42My4yMi0yLjQ0LjMyLS42NS4wOC0xLjI5LjE1LTEuOTQuMjEtMS4yNC4xNC0yLjQ5LjI0LTMuNzQuMzItLjcyLjA2LTEuNDQuMS0yLjE3LjEzLS42Ny4wNC0xLjM0LjA2LTIuMDEuMDgtLjE0LjAxLS4yOC4wMS0uNDEuMDEtLjE4LjAxLS4zNy4wMS0uNTYuMDEtLjc1LjAyLTEuNS4wMy0yLjI2LjAzLTIuNTgsMC01LjEzLS4wOS03LjY2LS4yNy0xLjI3LS4wOS0yLjUzLS4yLTMuNzgtLjMzLS41LS4wNS0uOTktLjEtMS40OS0uMTctMS40OS0uMTgtMi45Ny0uMzktNC40NC0uNjItMjkuMzUtNC43Ny01NC42NS0yMS40Mi03MS4wMy00NC43MS0yLjEtMi45OC00LjA0LTYuMDYtNS44NC05LjI1LS4yNi0uNDUtLjUxLS45MS0uNzUtMS4zNy0uMDQtLjA3LS4wOC0uMTQtLjEyLS4yMS0uMDQuMDEtLjA3LjAyLS4xMS4wMy0zLjkzLjkxLTcuODIsMS45NC0xMS42NywzLjA3LTM3LjQxLDExLTcwLjg0LDMxLjg5LTk3LjE1LDU5LjY4di0xMjYuNWgtNTguOHYyNzUuMjZjMCwxMjAuMTgsOTYuOTgsMjE4LjEsMjE3LjE2LDIxOC4xczIxOC4xLTk3LjkyLDIxOC4xLTIxOC4xYzAtNzIuNS0zNS4yNC0xMzYuNjUtODkuOC0xNzUuOTJaTTg0MS4yOSwxNDQ5LjI1Yy04Ny42MSwwLTE1OC4zNi03MS42OS0xNTguMzYtMTU5LjA3czcwLjc1LTE1OC4zNiwxNTguMzYtMTU4LjM2LDE1OS4wNyw3MC43NSwxNTkuMDcsMTU4LjM2LTcwLjc1LDE1OS4wNy0xNTkuMDcsMTU5LjA3WiIvPgo8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik03OTEuNjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0LjI3LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjI0NyA0OTEgMTUwNiAxMDE5Ij4KPGRlZnM+CjxzdHlsZT4KLmNscy0xIHsKZmlsbDogIzVjZDdmZjsKfQouY2xzLTIgewpmaWxsOiAjZmY2NzAwOwp9Ci5jbHMtMyB7CmZpbGw6ICNmZmY7Cn0KPC9zdHlsZT4KPC9kZWZzPgo8ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIj4KPGc+CjxwYXRoIGQ9Ik05NDIuODcsNTQ5LjdjLTEyMC4wNSwwLTIxNy44Myw5Ni45OS0yMTcuODMsMjE3LjAzLDAsNjkuNDcsMzIuNzUsMTMxLjQ5LDgzLjYxLDE3MS40MSwxOC4wOC0xNS44Myw0MC41My0yNS44OCw2NC4xOS0yOC43Ny01Mi41OS0yNi4wMS04OC45Ny04MC4yOC04OC45Ny0xNDIuNjQsMC04Ny40NSw3MS41NS0xNTguMiwxNTktMTU4LjJzMTU4LjIsNzAuNzUsMTU4LjIsMTU4LjItNjcuNDcsMTU1LjYzLTE1Mi4wNywxNTguODhjMjAuNDMsMTIuMTcsMzYuODMsMzAuNTEsNDYuOTIsNTIuMzgsNDAuNzYtMTAuMjYsNzcuMTEtMzIuMDcsMTA1LjE1LTYxLjh2NjQuNGg1OC44M3YtMjEzLjg2YzAtMTIwLjA0LTk2Ljk5LTIxNy4wMy0yMTcuMDMtMjE3LjAzWiIvPgo8cGF0aCBkPSJNMTEwMS4wNiwxMDE2LjExaDU4Ljh2Mjc0LjU2YzAsODcuNjEsNzAuNzUsMTU4LjM2LDE1OC4zNiwxNTkuMDZ2NTguOGMtMTIwLjE4LDAtMjE3LjE2LTk3LjkyLTIxNy4xNi0yMTguMXYtMjc0LjMyWiIvPgo8cGF0aCBkPSJNMTUwNS4zMSwxNDQ2LjY5YzEwLjMxLDEuNjQsMjAuNjIsMy4yOCwzMC45MiwzLjI4LDc3LjMxLDAsMTQxLjczLTU1Ljc1LDE1Ni4wMi0xMjkuNzhoNTkuNzRjLTE0LjI5LDEwNi41OS0xMDUuODksMTg4LjU4LTIxNS43NiwxODguNTgtMTIwLjE4LDAtMjE4LjEtOTcuOTItMjE4LjEtMjE4LjFzOTcuOTItMjE3LjE2LDIxOC4xLTIxNy4xNmM5Mi4zLDAsMTcxLjk1LDU3LjM5LDIwMi44NywxMzkuMzlsLTIzMy43OSwyMzMuNzlaTTE0NDcuMjEsMTQyMS44NmwyMjAuNDQtMjIwLjQ0Yy0yOC41OC00MS40Ni03Ny4zMS02OS4zNC0xMzEuNDItNjkuMzQtODcuNjEsMC0xNTkuMDYsNzAuNzUtMTU5LjA2LDE1OC4zNiwwLDU1LjA1LDI3Ljg4LDEwMi44NCw3MC4wNCwxMzEuNDJaIi8+CjxwYXRoIGQ9Ik02ODMuMjcsNDkxLjIzdjI3NS4yNmMwLDEyMC4xOC05Ni45OCwyMTguMS0yMTcuMTYsMjE4LjFzLTIxOC4xLTk3LjkyLTIxOC4xLTIxOC4xLDk3LjkyLTIxNy4xNiwyMTguMS0yMTcuMTZjNjIuMDgsMCwxMTguNTQsMjYuMjQsMTU4LjM2LDY4LjR2LTEyNi41aDU4LjhaTTQ2Ni4xMSw2MDguMzZjLTg3LjYxLDAtMTU5LjA2LDcwLjc1LTE1OS4wNiwxNTguMzZzNzEuNjgsMTU5LjA2LDE1OS4wNiwxNTkuMDYsMTU4LjM2LTcxLjY4LDE1OC4zNi0xNTkuMDYtNzAuNzUtMTU4LjM2LTE1OC4zNi0xNTguMzZaIi8+CjxwYXRoIGQ9Ik0xMjAxLjQ2LDQ5MS4yM2g1OC44djEyNi41YzM5LjgyLTQyLjE3LDk2LjI4LTY4LjQsMTU4LjM2LTY4LjQsMTIwLjg4LDAsMjE4LjEsOTYuOTgsMjE4LjEsMjE3LjE2cy05Ni45OCwyMTguMS0yMTguMSwyMTguMS0yMTcuMTYtOTcuOTItMjE3LjE2LTIxOC4xdi0yNzUuMjZoMFpNMTI2MC4yNiw3NjYuNzJjMCw4Ny42MSw3MC43NSwxNTkuMDYsMTU4LjM2LDE1OS4wNnMxNTkuMDYtNzEuNjgsMTU5LjA2LTE1OS4wNi03MC43NS0xNTguMzYtMTU5LjA2LTE1OC4zNi0xNTguMzYsNzAuNzUtMTU4LjM2LDE1OC4zNloiLz4KPHBhdGggZD0iTTk3MC4wMywxMTE0LjI2Yy0zLjI2LTIuMzYtNi41OS00LjYyLTkuOTktNi43OSwwLS4wMS0uMDEtLjAxLS4wMS0uMDEtLjA4LjA3LS4xNi4xNS0uMjUuMjItMy4wNywyLjgtNi4zMSw1LjQyLTkuNyw3Ljg0LTExLjcyLDguNC0yNS4xNywxNC40Ny0zOS42OSwxNy41OS0uNjMuMTUtMS4yNy4yOC0xLjkxLjQtLjM1LjA2LS43LjEzLTEuMDUuMi0uNjYuMTMtMS4zNC4yNS0yLjAxLjM2LS44My4xNC0xLjY1LjI3LTIuNDguMzktLjgxLjExLTEuNjMuMjItMi40NC4zMi0uNjUuMDgtMS4yOS4xNS0xLjk0LjIxLTEuMjQuMTQtMi40OS4yNC0zLjc0LjMyLS43Mi4wNi0xLjQ0LjEtMi4xNy4xMy0uNjcuMDQtMS4zNC4wNi0yLjAxLjA4LS4xNC4wMS0uMjguMDEtLjQxLjAxLS4xOC4wMS0uMzcuMDEtLjU2LjAxLS43NS4wMi0xLjUuMDMtMi4yNi4wMy0yLjU4LDAtNS4xMy0uMDktNy42Ni0uMjctMS4yNy0uMDktMi41My0uMi0zLjc4LS4zMy0uNS0uMDUtLjk5LS4xLTEuNDktLjE3LTEuNDktLjE4LTIuOTctLjM5LTQuNDQtLjYyLTI5LjM1LTQuNzctNTQuNjUtMjEuNDItNzEuMDMtNDQuNzEtMi4xLTIuOTgtNC4wNC02LjA2LTUuODQtOS4yNS0uMjYtLjQ1LS41MS0uOTEtLjc1LTEuMzctLjA0LS4wNy0uMDgtLjE0LS4xMi0uMjEtLjA0LjAxLS4wNy4wMi0uMTEuMDMtMy45My45MS03LjgyLDEuOTQtMTEuNjcsMy4wNy0zNy40MSwxMS03MC44NCwzMS44OS05Ny4xNSw1OS42OHYtMTI2LjVoLTU4Ljh2Mjc1LjI2YzAsMTIwLjE4LDk2Ljk4LDIxOC4xLDIxNy4xNiwyMTguMXMyMTguMS05Ny45MiwyMTguMS0yMTguMWMwLTcyLjUtMzUuMjQtMTM2LjY1LTg5LjgtMTc1LjkyWk04NDEuOTYsMTQ0OS4yNWMtODcuNjEsMC0xNTguMzYtNzEuNjktMTU4LjM2LTE1OS4wN3M3MC43NS0xNTguMzYsMTU4LjM2LTE1OC4zNiwxNTkuMDcsNzAuNzUsMTU5LjA3LDE1OC4zNi03MC43NSwxNTkuMDctMTU5LjA3LDE1OS4wN1oiLz4KPHBhdGggY2xhc3M9ImNscy0yIiBkPSJNNzkyLjMsMTA3OC42NWMxOC4yNywzMy45Nyw1My44OCw1Ni45Myw5NS4xMSw1Ni45MywyOC4xMSwwLDUzLjQxLTEwLjc4LDcyLjYyLTI4LjExLTMzLjk3LTIxLjc5LTc0LjUtMzQuNDQtMTE4LjA3LTM0LjQ0LTE3LjEtLjIzLTMzLjczLDEuODctNDkuNjYsNS42MloiLz4KPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNOTk0Ljk0LDEwMjguMDRjMCwzMS41MS0xMy40OSw1OS43Ni0zNC45LDc5LjQzLS4wOC4wNy0uMTYuMTUtLjI0LjIyLS4wMSwwLS4wMS0uMDEtLjAyLS4wMS0zMy45Ny0yMS43OC03NC40OS0zNC40My0xMTguMDUtMzQuNDMtMTYuODMsMC0zMy40MiwxLjg3LTQ5LjMxLDUuNi0uMDQsMC0uMDguMDItLjEyLjAzLS4wNC0uMDctLjA3LS4xNC0uMTEtLjIxLTcuOS0xNS4xOC0xMi41NC0zMi40NC0xMi41NC01MC42MywwLTI4LjExLDEwLjc3LTUzLjY0LDI4LjM0LTcyLjg1LDEuODgtMS44OCwzLjc1LTMuOTksNS44Ni01Ljg2LDEuNDctMS4zNywyLjk3LTIuNyw0LjUyLTMuOTgsMTYuOTQtMTQuMTYsMzguMzktMjMuMzQsNjIuMDEtMjQuODQsMi4zNC0uMjMsNC42OS0uMjMsNy4wMy0uMjMsMTkuMjEsMCwzNy4wMSw0LjkyLDUyLjcxLDEzLjgyLDE5LDEwLjU0LDM0LjM2LDI2LjksNDMuOTksNDYuNTIsMS4yOSwyLjYzLDIuNDgsNS4zMywzLjU2LDguMDcsMS4xOCwyLjU3LDIuMTEsNS4xNSwyLjgxLDcuNzMsMy4wNSw5LjgzLDQuNjksMjAuMzgsNC40NiwzMS42MloiLz4KPC9nPgo8L2c+Cjwvc3ZnPg=="};
+const ICON = {"white": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiBub25lOwogICAgICAgIHN0cm9rZTogI2ZmZjsKICAgICAgICBzdHJva2Utd2lkdGg6IDEwcHg7CiAgICAgIH0KCiAgICAgIC5jbHMtMiB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMSIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik01OC40MSwzMi44N2MtMy4yOCwwLTYuMjcsMS44OC02LjI3LDUuNjRzMi45OSw1LjcyLDYuMjcsNS43Miw2LjI3LTEuODksNi4yNy01LjcyLTIuOTktNS42NC02LjI3LTUuNjRaIi8+CiAgICA8cG9seWdvbiBjbGFzcz0iY2xzLTIiIHBvaW50cz0iNjggNzMgNjggODIgNTIuODMgODIgNTIuODMgNDguMzQgNjMuOTkgNDguMzQgNjMuOTkgNzMgNjggNzMiLz4KICA8L2c+Cjwvc3ZnPg==", "black": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTggMTEyIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgICAgc3Ryb2tlOiAjMDAwOwogICAgICAgIHN0cm9rZS13aWR0aDogMTBweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgCiAgPGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+CiAgICA8Y2lyY2xlIGNsYXNzPSJjbHMtMiIgY3g9IjU5IiBjeT0iNTYiIHI9IjQ1Ii8+CiAgICA8cGF0aCBkPSJNNTguNDEsMzIuODdjLTMuMjgsMC02LjI3LDEuODgtNi4yNyw1LjY0czIuOTksNS43Miw2LjI3LDUuNzIsNi4yNy0xLjg5LDYuMjctNS43Mi0yLjk5LTUuNjQtNi4yNy01LjY0WiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI2OCA3MyA2OCA4MiA1Mi44MyA4MiA1Mi44MyA0OC4zNCA2My45OSA0OC4zNCA2My45OSA3MyA2OCA3MyIvPgogIDwvZz4KPC9zdmc+"};
+const STORIES={"0": {"k": "Paperboy · 2026", "q": "What if local news was a locals-only club?", "above": "In the face of changing media landscapes and local news organizations shuttering around the country, what everyday needs are left unfulfilled? \n\nPaperboy began as a research question about the role of local news and media in the lives of residents in Monterey County, California. What emerged was a rich picture of old and new mediums meeting ancient and modern problems: How can I be relevant without being perceived? How can I find solace in my neighbors in hard times? How can sending an article mean \"I'm thinking of you\"?", "below": "Through our research, we found that the problem was not what we expected: rather than another news institution competing for attention and headlines, what was truly needed was a way to repair people's social fabric with their neighbors. By shifting our eye to the \"noun condition\", Paperboy is now something for people to be part of, offering a fresh take on what a news organization should be.", "caption": "Title Image Reference · Satire Image by Frederick Burr Opper, 1894", "support": [{"src": "assets/paperboy/SCR-20260903-ohvc.jpg", "w": 1600, "h": 903, "caption": "Prototype interactive map of Monterey County (Produced for Paperboy by Dabble. 2026)"}], "carousel": [], "story": false, "dabbler": true, "credits": ["Yousef Al-Riyami", "Kel Huang", "Maggie Namaganda", "Eric Singleton"], "slug": "paperboy"}, "1": {"k": "Sunny Ears · 2026", "q": "What if we could protect our brains by taking care of our ears?", "above": "The world around us has not been built keeping our ears in mind, and it turns out, most users don't give them much thought either. \n\nThere is mounting evidence that hearing health is one of the most easily modifiable risk factors for preventing neurodegenerative disease later in life. Hearing aids help, but how do we get people to wear them?", "below": "Hearing aid technologies face cultural and systemic barriers to adoption, with only a 62% adherence rate among patients who choose intervention.  This project explores the technologies, behaviors and systems that surround hearing loss, and determined that we can do better. [Citation: https://pmc.ncbi.nlm.nih.gov/articles/PMC10299666/]", "caption": "", "support": [{"src": "assets/sunny%20ears/priyanka-singh-Jt72_opb38I-unsplash.jpg", "w": 1600, "h": 1233, "caption": ""}], "carousel": [], "story": false, "dabbler": true, "credits": ["Anastasha Rachel Gunawan", "Julia Hou", "Sanzhar Myrzagalym", "Shawn Smith", "Yousef Al-Riyami"], "slug": "sunny ears"}, "2": {"k": "Pixar Lab.ble · 2026", "q": "What if creative studios collaborated as soulmates, not as business partners?", "above": "We hope to share more of this project soon... :)", "below": "", "caption": "", "support": [], "carousel": [], "story": false, "dabbler": true, "credits": ["Anastasha Rachel Gunawan"], "slug": "pixar lab.ble"}, "3": {"k": "Illuminate Pain · 2026", "q": "What if pain wasn't just a number from 1-10?", "above": "Pain is full of nuance and meaning. The 1-10 pain scale ignores it all, reducing a complex experience to a singular point. Particularly in chronic pain contexts, there is a gap between what an individual is able to express and what providers of care are able to understand.", "below": "Illuminate explores what it looks like to give pain a new visual language, one that empowers patient advocacy while providing clinical utility.", "caption": "", "support": [{"src": "assets/illuminate/WhatsApp%20Image%202026-09-09%20at%2000.44.09%20%281%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/illuminate/WhatsApp%20Image%202026-09-09%20at%2000.44.09.jpg", "w": 1600, "h": 943, "caption": ""}, {"src": "assets/illuminate/WhatsApp%20Image%202026-09-09%20at%2000.44.11.jpg", "w": 1600, "h": 1067, "caption": ""}], "carousel": [{"src": "assets/illuminate/carousel/WhatsApp%20Image%202026-09-09%20at%2000.44.10%20%281%29.jpg", "w": 1600, "h": 1066, "caption": ""}, {"src": "assets/illuminate/carousel/WhatsApp%20Image%202026-09-09%20at%2000.44.10%20%282%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/illuminate/carousel/WhatsApp%20Image%202026-09-09%20at%2000.44.10.jpg", "w": 1600, "h": 1066, "caption": ""}, {"src": "assets/illuminate/carousel/WhatsApp%20Image%202026-09-09%20at%2000.44.11%20%281%29.jpg", "w": 1067, "h": 1600, "caption": ""}], "story": true, "dabbler": false, "credits": ["Rishika Gundi"], "slug": "illuminate"}, "4": {"k": "Fate Matchbooks · 2025", "q": "What if fateful experiences could be intentionally cultivated?", "above": "Fateful experiences imbue the everyday a sense of magic. These moments happen in the most unexpected of circumstances: the cashier at the grocery store having the same birthday as you, or discovering that your long-lost childhood friend lives next door.", "below": "What if there was a way we could invite more of these moments to catch our attention? Fate Matchbooks was a project that invited participants to seek out the most magical, ordinary experiences of their day, and pass it on to the people around them.", "caption": "Fate Matchbooks Designed by K.Huang, Y. Al Riyami, A.R. Gunawan (2025)", "support": [{"src": "assets/fate%20matchbooks/IMG_4795%20copy.jpg", "w": 1600, "h": 900, "caption": ""}, {"src": "assets/fate%20matchbooks/IMG_4817%20copy.jpg", "w": 1600, "h": 900, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Kel Huang", "Yousef Al-Riyami", "Anastasha Rachel Gunawan"], "slug": "fate matchbooks"}, "5": {"k": "Lagu Hantu · 2026", "q": "What if we built our technologies with the spiritual ambition of the musical instrument?", "above": "Lagu Hantu resists the irresponsibly transient cultures of today's technologies. It follows a counter-model (the musical instrument); living technologies, built for cultural immortality and enduring ritual. It is a participatory sonic archive in the form of a handmade instrument installation that remembers everyone who has ever played it. When someone interacts with it, a bespoke computational algorithm searches an ever-growing archive of every past performance, summoning fragments that once accompanied similar gestures and playing them back through nearby loudspeakers.", "below": "We imagine the archive as a ritual rather than a repository, playing music with each other for centuries, and seeing the instrument far outlast us.", "caption": "", "support": [{"src": "assets/lagu%20hantu/laguhantu1%20-%20Anastasha%20Gunawan.jpg", "w": 1600, "h": 559, "caption": ""}, {"src": "assets/lagu%20hantu/laguhantu2%20-%20Anastasha%20Gunawan.jpg", "w": 1600, "h": 1034, "caption": ""}, {"src": "assets/lagu%20hantu/park_exhibit%20-%20Anastasha%20Gunawan.jpg", "w": 1600, "h": 1066, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Anastasha Rachel Gunawan"], "slug": "lagu hantu"}, "6": {"k": "are we there yet? · 2026", "q": "What if time was a felt sensation?", "above": "Time is a resource in the English language-- something to be spent, saved, wasted, or used wisely. But this way of thinking about time inevitably leads to a scarce and fleeting relationship, where every moment spent is one that you can never get back. How can we learn to relate to it differently?", "below": "are we there yet? (2026) is an interactive installation and performance art piece which offers a new approach to the practice of meditation. As participants cross off lines of repeating text on a wall, the sensation of time passing becomes impossible to ignore.", "caption": "Are We There Yet? · Installation and Performance Piece by Kel Huang (2026)", "support": [{"src": "assets/awty/awty2.jpg", "w": 1600, "h": 637, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Kel Huang"], "slug": "awty"}, "7": {"k": "desa-kala-patra · 2026", "q": "What if our time & technologies were bound by the rhythms of nature?", "above": "Made with a moisture sensor, an arduino, copper, wood, and gold paint, Desa-Kala-Patra is a water-sensing gong—it imagines an automated instrument that facilitates rituals at the coming of rain. It is guided by the ancient Balinese philosophy of harmony between time, place, and circumstance, facilitating rituals that are bound by the rhythms of nature. The gong will ring with the coming of rain, drawing the community together to signal the beginning of a new cycle of growth, a new season of change.", "below": "", "caption": "", "support": [{"src": "assets/desa-kala-patra/timepiece%20-%20Anastasha%20Gunawan.jpg", "w": 1600, "h": 1067, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Anastasha Rachel Gunawan"], "slug": "desa-kala-patra"}, "8": {"k": "Exploratorium — Light Play · 2025", "q": "What if making art reminds us to be kids again?", "above": "Anastasha partnered with the Exploratorium to bring Light Play to the Stanford d.school's 20th anniversary exhibition. With the tinkering studio's materials, we built an exhibition that allowed participants to \"mess up\" and rework each box, inviting analog play for an ever-changing display, and bringing about collective ownership & imagination.", "below": "", "caption": "", "support": [{"src": "assets/light%20play/play%20-%20Anastasha%20Gunawan.jpg", "w": 1362, "h": 1280, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Anastasha Rachel Gunawan"], "slug": "light play"}, "9": {"k": "Understanding Understanding · 2026", "q": "What if the people you love could turn you into a poet?", "above": "Understanding Understanding is an instrument and process for turning shared perception into art. Two people walk together with a disposable camera, taking turns seeing and scribing so that a shared world starts to surface between them. Back home, they transform what they collected into a blackout poem. The process ends in a small private gallery, so the art and the relationship behind it get witnessed. The participants learn together in this process that understanding someone doesn't mean seeing the same thing, but weaving two ways of seeing into one.", "below": "", "caption": "", "support": [{"src": "assets/understanding%20understanding/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%2810%29.jpg", "w": 1600, "h": 1068, "caption": ""}, {"src": "assets/understanding%20understanding/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%282%29.jpg", "w": 1600, "h": 1068, "caption": ""}, {"src": "assets/understanding%20understanding/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%284%29.jpg", "w": 1600, "h": 1067, "caption": ""}], "carousel": [{"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%281%29.jpg", "w": 1600, "h": 829, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%283%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%285%29.jpg", "w": 1600, "h": 1068, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%286%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%287%29.jpg", "w": 1600, "h": 900, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31%20%288%29.jpg", "w": 1068, "h": 1600, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.31.jpg", "w": 1067, "h": 1600, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.46.32.jpg", "w": 1600, "h": 900, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.53.34%20%281%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.53.34%20%282%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/understanding%20understanding/carousel/WhatsApp%20Image%202026-09-09%20at%2015.53.34.jpg", "w": 1600, "h": 1067, "caption": ""}], "story": true, "dabbler": false, "credits": ["Yousef Al-Riyami"], "slug": "understanding understanding"}, "10": {"k": "When Is Now? · 2024", "q": "What if we reimagined time for a mind that forgets?", "above": "When Is Now? is a conceptual clock inspired by the experience of Alzheimer's disease. Rather than measuring hours and minutes, it visualizes one's place within the changing seasons, offering time as orientation instead of precision.", "below": "The piece explores how design can preserve presence and dignity when conventional ways of understanding time begin to fade. Learn more: https://dianerhim.me/time-piece-when-is-now", "caption": "", "support": [{"src": "assets/when%20is%20now%3F/timepiece1%20-%20Diane%20Rhim.jpg", "w": 1436, "h": 1600, "caption": ""}, {"src": "assets/when%20is%20now%3F/timepiece3%20-%20Diane%20Rhim.jpg", "w": 1200, "h": 1600, "caption": ""}], "carousel": [], "story": true, "dabbler": false, "credits": ["Diane Rhim"], "slug": "when is now?"}, "11": {"k": "P.S. I Love You · 2026", "q": "What if love could be tasted?", "above": "Food is a conduit of love- it distills emotion and care in all its flavors and sets it onto a plate.", "below": "This piece is about love in all its flavors and learning to savor each one. It's about pausing to appreciate small moments of love that appear unannounced, gentle, warm, sometimes imperceptible, and letting the feeling wash over you.", "caption": "", "support": [{"src": "assets/PS%20I%20love%20you/WhatsApp%20Image%202026-09-10%20at%2023.55.30%20%281%29.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/PS%20I%20love%20you/WhatsApp%20Image%202026-09-10%20at%2023.55.30.jpg", "w": 1600, "h": 1067, "caption": ""}], "carousel": [{"src": "assets/PS%20I%20love%20you/carousel/WhatsApp%20Image%202026-09-10%20at%2023.55.31%20%281%29.jpg", "w": 1000, "h": 1000, "caption": ""}, {"src": "assets/PS%20I%20love%20you/carousel/WhatsApp%20Image%202026-09-10%20at%2023.55.31%20%282%29.jpg", "w": 1000, "h": 1000, "caption": ""}, {"src": "assets/PS%20I%20love%20you/carousel/WhatsApp%20Image%202026-09-10%20at%2023.55.31%20%283%29.jpg", "w": 1000, "h": 1000, "caption": ""}, {"src": "assets/PS%20I%20love%20you/carousel/WhatsApp%20Image%202026-09-10%20at%2023.55.31.jpg", "w": 1600, "h": 1067, "caption": ""}, {"src": "assets/PS%20I%20love%20you/carousel/WhatsApp%20Image%202026-09-10%20at%2023.55.32.jpg", "w": 1000, "h": 1000, "caption": ""}], "story": true, "dabbler": false, "credits": ["Rishika Gundi"], "slug": "PS I love you"}};
+const TEAM=[{"name": "Anastasha Rachel Gunawan", "role": "", "bio": "I am an artist, technologist, and inquirer; I coax the collective imagination through technologies for ritual and magic. My practice of inquiry involves the creation of these handmade technological artifacts, designing interventions (spaces, events, media) to invite more of them, and reading ancient & new texts about technological discovery/fear/hope. They remind me that we are moving in cycles, re-encountering ourselves time & again.", "photo": "assets/team/anastasha.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}, {"slug": "pixar lab.ble", "name": "Pixar Lab.ble · 2026", "url": "dabblers.html#pixar%20lab.ble", "img": "assets/pixar%20lab.ble/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "lagu hantu", "name": "Lagu Hantu · 2026", "url": "stories.html#lagu%20hantu", "img": "assets/lagu%20hantu/main.jpg"}, {"slug": "desa-kala-patra", "name": "desa-kala-patra · 2026", "url": "stories.html#desa-kala-patra", "img": "assets/desa-kala-patra/main.jpg"}, {"slug": "light play", "name": "Exploratorium — Light Play · 2025", "url": "stories.html#light%20play", "img": "assets/light%20play/main.jpg"}]}, {"name": "Diane Rhim", "role": "", "bio": "Loves: Craft as a form of care, translating memory into objects, the ocean\n\nInterests & Hobbies: Women’s health, food and nutrition, learning about care traditions across cultures, scuba diving, sunbathing with my dog\n\nKey Skills: Product & experience design and strategy, storytelling across different mediums, human-centered design research, CPG, systems thinking, and blending new technologies across physical and digital experiences.\n\n“Nature is pleased with simplicity.”  - Isaac Newton\"", "photo": "assets/team/diane.jpg", "projects": [{"slug": "when is now?", "name": "When Is Now? · 2024", "url": "stories.html#when%20is%20now%3F", "img": "assets/when%20is%20now%3F/main.jpg"}]}, {"name": "Eric Singleton", "role": "", "bio": "", "photo": "assets/team/eric.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}]}, {"name": "Julia Hou", "role": "", "bio": "Julia is fascinated with how to turn invisible dynamics into visible experiences. She’s endlessly curious about food, people, relationships and nature, and loves making things that help us notice what might otherwise go unseen.", "photo": "assets/team/julia.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Kel Huang", "role": "", "bio": "Loves: Metaphors, science writing, figuring out what makes people tick, cold beverages\n\nInterests & Hobbies: Dancing (Lindy Hop & House), Textiles, Print Media\n\nKey Skills: Graphic design, workshop facilitation, & building bespoke tools\n\n \"The coin that is lost in the river is found in the river.\"  -Zen Koan", "photo": "assets/team/kel.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "awty", "name": "are we there yet? · 2026", "url": "stories.html#awty", "img": "assets/awty/main.jpg"}]}, {"name": "Maggie Namaganda", "role": "", "bio": "", "photo": "assets/team/maggie.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}]}, {"name": "Rishika Gundi", "role": "", "bio": "A design engineer passionate about improving health through technologies & the systems that govern them. An artist experimenting with new mediums, a collector of languages, a child who loves to play with her food. Will take you up on a game of basketball, tennis or volleyball anytime. \n\nExpertise: CAD, Electromechanical Design, Graphic Design, Medical Device Design + Manufacture + Regulatory, Healthcare (FDA & CMS) Policy", "photo": "assets/team/rishika.jpg", "projects": [{"slug": "illuminate", "name": "Illuminate Pain · 2026", "url": "stories.html#illuminate", "img": "assets/illuminate/main.jpg"}, {"slug": "PS I love you", "name": "P.S. I Love You · 2026", "url": "stories.html#PS%20I%20love%20you", "img": "assets/PS%20I%20love%20you/main.jpg"}]}, {"name": "Sanzhar Myrzagalym", "role": "", "bio": "", "photo": "assets/team/sanzhar.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Shawn Smith", "role": "", "bio": "Shawn's work sits at the intersection of AI, behavior, and community — translating systems thinking into experiences that feel emotionally resonant, socially meaningful, and practically useful.\n\nBefore graduate school at Stanford, he led data teams and built data-driven products inside large organizations, bringing technical depth, product strategy, and organizational leadership to complex human problems. He is now focused on shaping emerging technologies, especially AI, in service of care, connection, and human flourishing.", "photo": "assets/team/shawn.jpg", "projects": [{"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}]}, {"name": "Yousef Al-Riyami", "role": "", "bio": "Loves: Novels, Poetry, Helping people turn into artists\n\nInterests & Hobbies: Origami, Cafe-hopping, Museum Experiences, Theatre Production\n\nKey Skills: Experiential design, storytelling, & coaching and asking hard questions\n\n \"And watch with glittering eyes the whole world around you because the greatest secrets are always hidden in the most unusual places. Those who don't believe in magic will never find it.\" - Roald Dahl", "photo": "assets/team/yousef.jpg", "projects": [{"slug": "paperboy", "name": "Paperboy · 2026", "url": "dabblers.html#paperboy", "img": "assets/paperboy/main.jpg"}, {"slug": "sunny ears", "name": "Sunny Ears · 2026", "url": "dabblers.html#sunny%20ears", "img": "assets/sunny%20ears/main.jpg"}, {"slug": "fate matchbooks", "name": "Fate Matchbooks · 2025", "url": "stories.html#fate%20matchbooks", "img": "assets/fate%20matchbooks/main.jpg"}, {"slug": "understanding understanding", "name": "Understanding Understanding · 2026", "url": "stories.html#understanding%20understanding", "img": "assets/understanding%20understanding/main.jpg"}]}];
+const under=document.getElementById('under'), underList=document.getElementById('underList'),
+      credit=document.getElementById('credit'), dog=document.getElementById('dog'),
+      fold=document.getElementById('fold'), back=document.getElementById('back'),
+      dawn=document.getElementById('dawn'), glow=document.getElementById('glow'),
+      paper=document.getElementById('paper'),
+      limb=document.getElementById('limb'), limbGlow=document.getElementById('limbGlow'),
+      grain=document.getElementById('grain'), logo=document.getElementById('logo'),
+      titleWrap=document.getElementById('titleWrap'), ringEl=document.getElementById('ring'),
+      hintEl=document.getElementById('hint'),
+      ovl=document.getElementById('ovl'), card=document.getElementById('card'),
+      cShot=document.getElementById('cShot'), cKick=document.getElementById('cKick'),
+      cQ=document.getElementById('cQ'), cCopy=document.getElementById('cCopy'),
+      cMeta=document.getElementById('cMeta'), cCaro=document.getElementById('cCaro');
+
+/* Pressing no longer pushes the pictures at you — a press is now the start of reading one. */
+HERO.diveOnHold=false;
+
+/* Layers that must sit outside the hero so nothing clips them. */
+[dawn,glow,grain,limbGlow,limb,paper,under,fold,dog,back,logo,ovl].forEach(el=>document.body.appendChild(el));
+dog.innerHTML='<img src="'+ICON.white+'" alt="">';
+/* the overlay has to live outside .hero: inside it, the perspective context lets the
+   3D-transformed pictures paint over anything, whatever its z-index */
+
+logo.innerHTML='<img class="spacer" src="'+LOGO.white+'" alt="Dabble">'
+             + '<img class="w" src="'+LOGO.white+'" alt="">'
+             + '<img class="b" src="'+LOGO.black+'" alt="">';
+const logoW=logo.querySelector('.w'), logoB=logo.querySelector('.b');
+
+/* Every ramp is sampled to 57 stops with smoothstep easing between keys, so the rate
+   of change never jumps at a stop and no two neighbours are separable. */
+const ramp=(keys,n)=>{
+  const px=c=>c[0]==='#'? [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16),1]
+                        : c.match(/[\d.]+/g).map(Number);
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    let k=0; while(k<keys.length-2 && keys[k+1][0]<t) k++;
+    const [t0,c0]=keys[k], [t1,c1]=keys[k+1];
+    let u=(t-t0)/(t1-t0); u=Math.min(1,Math.max(0,u));
+    const e=u*u*(3-2*u);
+    const a=px(c0), b=px(c1);
+    const v=[0,1,2].map(j=>Math.round(a[j]+(b[j]-a[j])*e));
+    const a3=(a[3]===undefined?1:a[3]), b3=(b[3]===undefined?1:b[3]);
+    const al=a3+(b3-a3)*e;
+    out.push([t,`rgba(${v[0]},${v[1]},${v[2]},${al.toFixed(3)})`]);
+  }
+  return out;
+};
+/* A raised cosine falls to zero at both ends *and* flattens as it gets there, so the
+   line dissolves rather than stopping. */
+const taper=(centre,half,rgbMid,rgbEnd,peak,n,rgbCore,coreW)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const u=i/n;                       // -1..1 across the segment
+    const x=-1+2*u;
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    const m=1-Math.abs(x);
+    let c=[0,1,2].map(j=>Math.round(rgbEnd[j]+(rgbMid[j]-rgbEnd[j])*m));
+    if(rgbCore){                       // a glint of the sun's own edge, dead centre
+      const t=Math.max(0,1-Math.abs(x)/coreW), g=t*t*(3-2*t);
+      c=c.map((v,j)=>Math.round(v+(rgbCore[j]-v)*g));
+    }
+    const pos=(centre+half*x)*100;
+    out.push(`rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)}) ${pos.toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(255,120,0,0) 0%,${out.join(',')},rgba(255,120,0,0) 100%)`;
+};
+
+const taperMask=(centre,half,peak,n)=>{
+  const out=[];
+  for(let i=0;i<=n;i++){
+    const x=-1+2*(i/n);
+    const a=peak*0.5*(1+Math.cos(Math.PI*x));
+    out.push(`rgba(0,0,0,${a.toFixed(3)}) ${((centre+half*x)*100).toFixed(2)}%`);
+  }
+  return `linear-gradient(90deg,rgba(0,0,0,0) 0%,${out.join(',')},rgba(0,0,0,0) 100%)`;
+};
+
+const stops=(r,scale,off)=>r.map(([t,c])=>`${c} ${((off+t*scale)*100).toFixed(2)}%`).join(',');
+
+/* night holds a long way out, then climbs to a pale horizon */
+const SKY=ramp([[0,'#01030b'],[.34,'#02091f'],[.56,'#0a2044'],[.74,'#20507f'],
+                [.88,'#6d9dc7'],[.95,'#c3dbe8'],[1,'#e9f0f2']],48);
+/* the sun, as light to add: warm and strong at the core, with a very long faint tail */
+const SUN=ramp([[0,'rgba(255,248,226,1)'],[.15,'rgba(255,206,108,1)'],
+                [.28,'rgba(255,142,24,0.99)'],[.42,'rgba(246,104,12,0.82)'],
+                [.57,'rgba(198,72,14,0.46)'],[.74,'rgba(124,48,18,0.17)'],
+                [.89,'rgba(54,28,20,0.04)'],[1,'rgba(18,12,16,0)']],40);
+/* a wide, weak wash so the light bleeds along the horizon instead of stopping dead */
+const WASH=ramp([[0,'rgba(255,132,36,0.40)'],[.26,'rgba(214,88,22,0.22)'],
+                 [.56,'rgba(112,46,20,0.06)'],[1,'rgba(24,14,14,0)']],40);
+
+/* ---- sub-pages ----------------------------------------------------------------------
+   Each is its own document. PAGE_URLS maps a nav label to a file; Stories, Dabblers, About
+   and Contact slot in here as they get built. Following a link leaves this page entirely,
+   so the peel's state is not carried across. */
+const PAGE_URLS = { 'Stories': 'stories.html', 'Dabblers': 'dabblers.html', 'Our Team': 'our-team.html', 'About': 'about.html', 'Contact': 'contact.html' };
+
+const items=PAGES.map(p=>{
+  const li=document.createElement('li');
+  li.innerHTML='<span>'+p+'</span>';
+  li.addEventListener('click',e=>{
+    e.stopPropagation();
+    const url=PAGE_URLS[p];
+    if(url) leaveTo(url);
+    li.querySelector('span').animate(
+      [{transform:'translateX(-14px)'},{transform:'translateX(-40px)',opacity:.15},
+       {transform:'translateX(-14px)',opacity:1}],{duration:620,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+  underList.appendChild(li); return li;
+});
+
+/* ---------- every picture is a door into a story ---------- */
+let hoverSlow=0, cardOpen=false, hotNode=null;
+
+HERO.nodes.forEach(n=>{
+  const st=STORIES[n.img.id]; if(!st) return;
+  n.story=st;
+  /* Type is sized from the picture's SHORT edge, not its width — the caption stacks
+     downward, so a wide picture has no more room for it than a tall one, and scaling on
+     width made the landscape ones shout. Clamped either way so the whole set matches. */
+  const wpx=parseFloat(n.el.style.width)/100*innerWidth;
+  const hpx=wpx*(n.img.h/n.img.w);
+  const F=Math.max(17,Math.min(30,Math.min(wpx,hpx)*0.16));
+  n.el.style.fontSize=F.toFixed(1)+'px';
+  const cap=document.createElement('div');
+  cap.className='cap';
+  cap.innerHTML='<span class="kick">'+st.k+'</span><span class="q">'+st.q+'</span>';
+  n.el.appendChild(cap);
+  n.el.__node=n;
+
+
+});
+
+const LIFT=300;                                 // how far a picked-up picture comes forward
+const PER=1400;                                 // the field's perspective, from .hero
+
+/* Picking one up holds it still while the rest of the bloom carries on. Its phase is
+   re-anchored every frame, so on release it simply resumes from where it is — nothing
+   snaps back across the screen. */
+/* Hover is hit-tested by hand, every few frames.
+   Two reasons the browser cannot be trusted with this here. It only re-tests what is
+   under the cursor when the CURSOR moves, so a picture drifting onto a still pointer is
+   never noticed. And elementFromPoint is unreliable inside a preserve-3d field: most of
+   the pictures report as the container rather than themselves, which left a large and
+   arbitrary dead zone. Measuring the boxes ourselves and taking the frontmost makes
+   every picture reactive, everywhere. */
+let mx=-1, my=-1, tick=0;
+let lastPT='mouse', cardTapGuard=0;
+addEventListener('pointermove',e=>{ mx=e.clientX; my=e.clientY; lastPT=e.pointerType },{passive:true});
+addEventListener('pointerleave',()=>{ mx=my=-1; clearHot() });
+
+/* the dog-ear keeps a small exclusive patch; everywhere else, every picture reacts */
+const cornerCore=(x,y)=>((innerWidth-x)+(innerHeight-y))<170;
+
+function hitAt(x,y){
+  let best=null, bz=-1e9;
+  for(const n of HERO.nodes){
+    if(!n.story) continue;
+    const r=n.el.getBoundingClientRect();
+    if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom && n.sz>bz){ bz=n.sz; best=n }
+  }
+  return best;                                   // frontmost wins, as it does on screen
+}
+
+/* a click opens whatever is currently in hand */
+addEventListener('click',e=>{
+  if(cardOpen || !hotNode) return;
+  if(nearCorner(e.clientX,e.clientY)) return;
+  openStory(hotNode);
+});
+
+function pickUp(n){
+  if(hotNode===n) return;
+  clearHot();
+  hotNode=n;
+  n.aHold=n.a+HERO.rot+HERO.rotOffset;
+
+  /* Work out, once, how far it needs to come inward so the whole picture and its
+     caption end up on screen — then move there in one calm slide. Recomputing this
+     every frame is what made the motion duck and weave. */
+  const r=n.el.getBoundingClientRect();
+  const gNow=PER/(PER-n.z), gEnd=PER/(PER-(n.z+LIFT));
+  const grow=gEnd/gNow;
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const w=r.width*grow, h=r.height*grow, m=30;
+  let dx=0, dy=0;
+  if(w>innerWidth-2*m)            dx=innerWidth/2-cx;
+  else if(cx-w/2<m)               dx=m-(cx-w/2);
+  else if(cx+w/2>innerWidth-m)    dx=(innerWidth-m)-(cx+w/2);
+  if(h>innerHeight-2*m)           dy=innerHeight/2-cy;
+  else if(cy-h/2<m)               dy=m-(cy-h/2);
+  else if(cy+h/2>innerHeight-m)   dy=(innerHeight-m)-(cy+h/2);
+  n.pullTX=dx/gEnd; n.pullTY=dy/gEnd;            // screen pixels -> world pixels
+  n.el.classList.add('hot');
+}
+function clearHot(){
+  if(hotNode){ hotNode.el.classList.remove('hot'); hotNode.aHold=undefined; hotNode.box=null;
+                hotNode.pullTX=0; hotNode.pullTY=0; hotNode=null }
+}
+let caro=null;
+const escH = function(t){ return String(t).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] }) };
+const linkifyH = function(str){ return String(str).replace(/(https?:\/\/[^\s<]+)/g, function(m){
+  const tl=m.match(/[.,;:!?)\]'"]+$/); const u=tl?m.slice(0,-tl[0].length):m;
+  return '<a href="'+u+'" target="_blank" rel="noopener">'+u+'</a>'+(tl?tl[0]:''); }); };
+const parasH = function(t){ return String(t||'').split(/\n\s*\n/).map(function(x){return x.trim();}).filter(Boolean)
+  .map(function(x){ return '<p>'+linkifyH(escH(x))+'</p>'; }).join(''); };
+function buildCaro(list){
+  if(!list || !list.length){ cCaro.innerHTML=''; caro=null; return; }
+  const slides = list.map(function(im){ return '<div class="caroSlide"><img loading="lazy" src="'+escH(im.src)+'" alt=""></div>'; }).join('');
+  const multi = list.length>1;
+  cCaro.innerHTML =
+    '<div class="caro"><div class="caroStage">'
+    + (multi?'<button class="caroBtn prev" id="caroPrev" aria-label="Previous">\u2039</button>':'')
+    + '<div class="caroTrack" id="caroTrack">'+slides+'</div>'
+    + (multi?'<button class="caroBtn next" id="caroNext" aria-label="Next">\u203a</button>':'')
+    + '</div><div class="caroBar"><span class="caroCap" id="caroCap"></span>'
+    + (multi?'<span class="caroNum" id="caroNum"></span>':'')
+    + '</div></div>';
+  caro = {items:list, i:0, track:document.getElementById('caroTrack'),
+          cap:document.getElementById('caroCap'), num:document.getElementById('caroNum'),
+          prev:document.getElementById('caroPrev'), next:document.getElementById('caroNext')};
+  if(multi){
+    caro.prev.addEventListener('click',function(){ caroGo(caro.i-1); });
+    caro.next.addEventListener('click',function(){ caroGo(caro.i+1); });
+  }
+  caroGo(0);
+}
+function caroGo(n){
+  if(!caro) return;
+  const max=caro.items.length-1;
+  caro.i=Math.max(0,Math.min(max,n));
+  caro.track.style.transform='translateX('+(-caro.i*100)+'%)';
+  const im=caro.items[caro.i];
+  caro.cap.textContent=im.caption||'';
+  if(caro.num) caro.num.textContent=(caro.i+1)+' / '+caro.items.length;
+  if(caro.prev) caro.prev.disabled = caro.i===0;
+  if(caro.next) caro.next.disabled = caro.i===max;
+}
+function openStory(n){
+  if(cardOpen) return;
+  const st=n.story; if(!st) return;
+  cardOpen=true;
+  cardTapGuard=performance.now()+450;
+  cShot.src=IMAGES[n.img.id].src;
+  cKick.textContent=st.k;
+  cQ.textContent=st.q;
+  /* Supporting images are files under assets/, not data URIs: they are only wanted once
+     a card is open, and embedding them would grow the page with every entry added. The
+     grid takes any number, and an entry with none simply runs its two paragraphs on. */
+  const esc = function(t){ return String(t).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] }) };
+  const sup = (st.support && st.support.length)
+    ? st.support.map(function(im){
+        return '<figure class="plate"><img loading="lazy" width="'+im.w+'" height="'+im.h+'"'
+             + ' src="'+esc(im.src)+'" alt="">'
+             + (im.caption ? '<figcaption>'+esc(im.caption)+'</figcaption>' : '')
+             + '</figure>' }).join('')
+    : '';
+  cCopy.innerHTML = (st.above ? parasH(st.above) : '') + sup
+                  + (st.below ? parasH(st.below) : '');
+  buildCaro(st.carousel);
+  cMeta.textContent = st.caption || '';
+  ovl.classList.add('on');
+  HERO.wheelLocked=true;                          // the wheel scrolls the story, not the bloom
+  ovl.querySelector('.cardScroll').scrollTop=0;
+  /* the card grows out of the picture you clicked */
+  const r=n.el.getBoundingClientRect();
+  const dx=(r.left+r.width/2)-innerWidth/2, dy=(r.top+r.height/2)-innerHeight/2;
+  card.animate([{transform:`translate(${dx}px,${dy}px) scale(.34)`,opacity:0},
+                {transform:'translate(0,0) scale(1)',opacity:1}],
+               {duration:620,easing:'cubic-bezier(.16,.86,.22,1)'});
+  clearHot();
+}
+function closeStory(){
+  if(!cardOpen) return;
+  cardOpen=false;
+  HERO.wheelLocked=false;
+  ovl.classList.remove('on');
+}
+document.getElementById('x').addEventListener('click',e=>{ e.stopPropagation(); closeStory() });
+ovl.addEventListener('click',e=>{ if(e.target===ovl && performance.now()>cardTapGuard) closeStory() });
+
+const MAXD=()=>innerWidth+innerHeight;
+/* Rest the peel short of the brand mark: the fold must never cross it. */
+const OPEN=()=>{
+  const r=logoBox||logo.getBoundingClientRect();
+  /* On tall/portrait screens the paper would otherwise rest with its crease running
+     straight through the brand mark. Peel a little past the mark instead, so the whole
+     logo sits cleanly on the cream (it flips to its black face) and the fold clears it. */
+  if(innerHeight > innerWidth){
+    const cMax=(innerWidth-r.left)+(innerHeight-r.top);   // far corner of the mark
+    const pad=Math.max(58, innerHeight*0.045);
+    return clamp(Math.max(MAXD()*0.32, cMax+pad), 0, MAXD()*0.9);
+  }
+  /* Wide/landscape: rest short of the mark, the fold never reaching it. */
+  const clear=r.right+r.bottom+Math.max(90,innerWidth*0.06);
+  return Math.max(MAXD()*0.32, MAXD()-clear);
+};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let d=0, want=0, dragging=false, moved=false, open=false, sx=0, sy=0;
+
+/* Leaving for a sub-page: carry the peel past the far corner so the paper covers the whole
+   window - cream ground, black mark - and only then follow the link. The sub-page opens on
+   the same cream ground with the same black mark, so the two documents meet on an identical
+   frame and the change of file does not show. */
+let leaving=null, leaveAt=0, went=false;
+function leaveTo(url){
+  if(leaving) return;
+  leaving=url; leaveAt=performance.now(); open=true; want=MAXD();
+}
+
+const onPaper=(x,y)=>((innerWidth-x)+(innerHeight-y)) < d;
+const nearCorner=(x,y)=>((innerWidth-x)+(innerHeight-y))<340;   // a generous corner target (mouse)
+function onDog(x,y){ const r=dog.getBoundingClientRect(), pad=12;
+  return x>=r.left-pad && x<=r.right+pad && y>=r.top-pad && y<=r.bottom+pad; }  // just the info mark (touch)
+
+addEventListener('pointerdown',e=>{
+  if(cardOpen || leaving) return;
+  lastPT=e.pointerType;
+  /* the dog-ear always belongs to the peel, even if a picture was still in hand */
+  if(cornerCore(e.clientX,e.clientY)) clearHot();
+  if(hotNode) return;                          // otherwise a picture has this press
+  clearHot();
+  sx=e.clientX; sy=e.clientY; moved=false;
+  if(open){ dragging=true; document.body.style.cursor='grabbing' }   // drag only ever adjusts an already-open menu
+});
+addEventListener('pointermove',e=>{
+  if(Math.hypot(e.clientX-sx,e.clientY-sy)>10) moved=true;
+  if(!dragging) return;
+  if(moved) want=clamp((innerWidth-e.clientX)+(innerHeight-e.clientY),0,MAXD());
+});
+addEventListener('pointerup',e=>{
+  if(leaving) return;
+  if(e.pointerType==='touch'){
+    const wasDrag = dragging && moved;                 // a deliberate corner peel
+    dragging=false; document.body.style.cursor='';
+    if(cardOpen) return;
+    if(wasDrag){ open = want > OPEN()*0.42; want = open? OPEN() : 0; return; }
+    if(moved) return;                                  // a scroll/slide, not a tap
+    if(open){ if(!onPaper(e.clientX,e.clientY)){ open=false; want=0 } return; }
+    if(onDog(e.clientX,e.clientY)){ open=true; want=OPEN(); return; }  // only the mark opens the menu
+    const hit = hitAt(e.clientX,e.clientY);
+    if(hit) openStory(hit);                            // a tap on a picture opens its card
+    return;
+  }
+  const wasDrag = dragging;
+  dragging=false; document.body.style.cursor='';
+  if(wasDrag && moved){ open = want > OPEN()*0.42; want = open? OPEN() : 0; return; }  // dragging an already-open menu
+  if(moved) return;                                                                    // a slide, not a click
+  if(open){ if(!onPaper(e.clientX,e.clientY)){ open=false; want=0 } return; }           // click off the open paper → home
+  if(onDog(e.clientX,e.clientY)){ open=true; want=OPEN() }                              // only the info mark opens
+});
+addEventListener('keydown',e=>{
+  if(cardOpen && caro && e.key==='ArrowLeft'){ caroGo(caro.i-1); return; }
+  if(cardOpen && caro && e.key==='ArrowRight'){ caroGo(caro.i+1); return; }
+  if(e.key!=='Escape') return;
+  if(cardOpen) closeStory(); else { open=false; want=0 } });
+
+let SPAN=0, SKYH=0, SUNR=0, WASHR=0, LIMBL=0, GLOWL=0;
+const SQ2=Math.SQRT2;
+
+/* Everything about the sky is baked once, at load and on resize. Nothing here is
+   recomputed while you drag — the fold, the sun and the limb are all moved by
+   transform alone, so not one pixel is ever repainted mid-gesture. */
+function buildSky(){
+  const W=innerWidth, H=innerHeight, diag=Math.hypot(W,H);
+  SPAN=Math.ceil((W+H)*1.06);                 // long enough to reach every corner along the fold
+  SUNR=Math.min(W,H)*1.30;
+  WASHR=SUNR*1.20;
+  const SKYSCALE=(W+H)*0.42;                  // how far the night reaches from the fold
+  SKYH=Math.ceil(SKYSCALE*1.7);
+  LIMBL=Math.round(SUNR*0.33);                // the lit segment of horizon
+  GLOWL=Math.round(LIMBL*2.1);
+
+  paper.style.width=SPAN+'px'; paper.style.height=SPAN+'px';
+  fold.style.width=SPAN+'px';
+  dawn.style.width=SPAN+'px'; dawn.style.height=SKYH+'px';
+  limb.style.width=LIMBL+'px'; limbGlow.style.width=GLOWL+'px';
+  const GB=Math.ceil(WASHR*2);
+  glow.style.width=GB+'px'; glow.style.height=GB+'px';
+
+  /* the sky: pale at the fold, night far from it — measured in pixels, so it holds
+     its shape wherever the fold happens to be */
+  const skyPx=SKY.map(([t,c])=>`${c} ${((1-t)*SKYSCALE).toFixed(0)}px`).reverse().join(',');
+  /* and a shadow running along the fold, so one end of the horizon stays dark */
+  const a=(-0.48*diag).toFixed(0), b=(0.09*diag).toFixed(0), c2=(0.65*diag).toFixed(0);
+  dawn.style.background=
+    `linear-gradient(90deg,rgba(1,3,11,0) calc(50% + ${a}px),`+
+      `rgba(1,4,14,.34) calc(50% + ${b}px),rgba(1,3,10,.74) calc(50% + ${c2}px)),`+
+    `linear-gradient(0deg,${skyPx})`;
+
+  /* the sun, drawn once into its own box and simply moved around */
+  glow.style.background=
+    `radial-gradient(circle ${SUNR.toFixed(0)}px at 50% 50%,${stops(SUN,1,0)}),`+
+    `radial-gradient(circle ${WASHR.toFixed(0)}px at 50% 50%,${stops(WASH,1,0)})`;
+
+  /* the limb is its own short segment now, so its taper never has to be recomputed */
+  limb.style.background=taper(0.5,0.5,[255,198,72],[255,112,0],1.00,46);
+  const m=taperMask(0.5,0.5,0.9,40);
+  limbGlow.style.webkitMaskImage=m; limbGlow.style.maskImage=m;
+}
+
+let logoBox=null;
+const measureLogo=()=>{ logoBox=logo.getBoundingClientRect() };
+addEventListener('resize',()=>{ measureLogo(); buildSky() });
+setTimeout(()=>{ measureLogo(); buildSky() },0);
+
+let warm=false, grainOn=false, lastSun=-1, foldOn=false, worldOn=true;
+let sunCx=0, sunCy=0;
+
+HERO.frame.push(()=>{
+  /* While you are holding it, the edge tracks the cursor 1:1 — any easing here reads
+     as input lag. The easing is only for the release, when it settles on its own. */
+  if(dragging) d=want; else { d+=(want-d)*HERO.ease(0.1); if(Math.abs(want-d)<0.4) d=want }
+  /* `leaving` is never cleared, and the frame is not cut short. The browser keeps painting
+     this document until the new one commits, so clearing it would let lv fall back to 0 and
+     flash the links bright again on the very last frames before the change. */
+  if(leaving && !went){
+    const t=performance.now();
+    if(d>MAXD()*0.985 || t-leaveAt>1600){ went=true; location.href=leaving }
+  }
+  const dp=-d/SQ2, off=-SPAN/2;
+  paper.style.transform=`rotate(-45deg) translate(${off}px,${dp.toFixed(1)}px)`;
+  const T=innerWidth+innerHeight;
+  const p=d/T;                       // fraction of the diagonal
+  const q=clamp(d/OPEN(),0,1.6);     // fraction of the way to the resting point
+
+  /* The splash cross-fades entirely BEHIND the sky, where nobody can see it happen.
+
+     The sky itself fades out over q 0.92 -> 0.42 (see `sun` below), so the bloom has to be
+     fully painted BEFORE the sky starts thinning - otherwise the night gradient sits over a
+     half-drawn bloom and dims it, which looks like the page loading. Measured: paper + sky
+     occlude the bloom completely for q >= 0.70. So the fade runs 0.95 -> 0.75, finished
+     while the sky is still near-solid, and the sky then lifts away over a bloom that has
+     been there the whole time. Closing is a pure reveal.
+
+     The original curve (1-q*2.2) faded it over q 0.45 -> 0 instead - long after the sun had
+     gone at q=0.42. For about half a second neither the sunrise nor the pictures were on
+     screen: it went black and the home page appeared to reload. That was the "refresh".
+
+     Keep the whole window above q=0.70. Below ~0.48 the sky no longer covers and pictures
+     ghost through the night side. */
+  const fadeOut=clamp((0.95-q)/0.20,0,1);
+  const rin=clamp((performance.now()-1000)/1800,0,1);
+  world.style.opacity=fadeOut;
+  ringEl.style.opacity=fadeOut*rin*0.85;
+  const showWorld=fadeOut>0.001;     // 30 transformed images cost nothing once hidden
+  if(showWorld!==worldOn){ worldOn=showWorld; world.style.visibility=worldOn?'':'hidden' }
+  HERO.freeze=!worldOn;              // hold the spiral exactly where it left off
+  /* freeze the instant a picture is hovered, or it drifts out from under the cursor
+     before you can read it; ease back only on the way out */
+  /* only the picked-up picture stops; the rest of the swirl carries on */
+  hoverSlow = cardOpen? 1 : hoverSlow*0.90;
+  /* The peel does not slow the swirl at all - it drifts at one speed throughout, and is
+     already in motion the moment the page uncovers it. Only an open story card stills it.
+     HERO.freeze below still holds the field while it is hidden, so it comes back exactly
+     where it was left; that stop is never seen, and there is no ramp on either side. */
+  HERO.slow=hoverSlow;
+  titleWrap.style.opacity=fadeOut;      // same curve, for the same reason
+  hintEl.style.display = q>0.03? 'none' : '';
+
+  /* ---- sunrise: position only, never paint ---- */
+  const sun=clamp((q-0.42)/0.5,0,1);
+  const sq=Math.round(sun*100)/100;
+  if(sq!==lastSun){
+    lastSun=sq;
+    dawn.style.opacity=sq; glow.style.opacity=sq;
+    limb.style.opacity=sq; limbGlow.style.opacity=sq;
+  }
+  if((sun>0)!==warm){ warm=sun>0;
+    fold.style.background = warm
+      ? 'linear-gradient(90deg,rgba(255,228,190,0) 34%,rgba(255,228,190,.30) 50%,rgba(255,214,160,0) 68%)'
+      : 'linear-gradient(90deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.7) 50%,rgba(255,255,255,0) 72%)';
+  }
+  if(sq>0){
+    dawn.style.transform=`rotate(-45deg) translate(${off}px,${(dp-SKYH).toFixed(1)}px)`;
+    /* where the sun meets the fold */
+    const S=T-d;
+    const x1=Math.min(S,innerWidth),  y1=S-x1;
+    const y2=Math.min(S,innerHeight), x2=S-y2;
+    const hx=x2+(x1-x2)*0.29, hy=y2+(y1-y2)*0.29;
+    const k=SUNR*0.28;                          // buried under the horizon
+    sunCx=hx+k; sunCy=hy+k;
+    glow.style.transform=`translate(${sunCx.toFixed(1)}px,${sunCy.toFixed(1)}px) translate(-50%,-50%)`;
+    limb.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-2px)`;
+    limbGlow.style.transform=`translate(${hx.toFixed(1)}px,${hy.toFixed(1)}px) rotate(-45deg) translate(-50%,-25px)`;
+  }
+
+  if((d>6)!==foldOn){ foldOn=d>6; fold.style.opacity=foldOn?1:0 }
+  dog.style.opacity = clamp(1-q*8,0,1);
+  back.classList.toggle('on', open && q>0.8);
+
+  /* menu items ease in one after another, continuously */
+  /* On the way out the links fade with the last of the fold, so the final frame before
+     the link is followed is bare cream and a black mark - which is exactly the frame the
+     next page opens on. Leave them lit and they pop away at the seam. */
+  const lv = leaving ? clamp((d-OPEN())/Math.max(1,MAXD()-OPEN()),0,1) : 0;
+  items.forEach((li,i)=>{
+    const o=clamp((q-(0.18+i*0.09))/0.28,0,1)*(1-lv);
+    li.style.opacity=o;
+    li.style.transform=`translateX(${(1-o)*30}px)`;
+  });
+  credit.style.opacity=clamp((q-0.72)/0.24,0,1);
+  under.classList.toggle('live', q>0.5);
+
+  /* the mark flips white→black if the paper reaches it, or if the sky behind it
+     gets bright enough that white would stop reading */
+  const r=logoBox||logo.getBoundingClientRect();
+  const lx=r.left+r.width*0.5, ly=r.top+r.height*0.5;
+  const c=(innerWidth-lx)+(innerHeight-ly);
+  const onPaperNow=clamp((d-(c-110))/200,0,1);
+  const lit=sun>0? clamp((1-Math.hypot(lx-sunCx,ly-sunCy)/SUNR-0.60)/0.10,0,1)*sun : 0;
+  const over=Math.max(onPaperNow,lit);
+  logoW.style.opacity=1-over; logoB.style.opacity=over;
+
+  /* Release as soon as the pointer is off the picture, and grab whatever is under it.
+
+     Hover stays off until the page is flat again - hence the d>0 test. `open` goes false
+     the instant you click to go home, but the paper takes about a second to lay back down
+     and the pictures are hidden behind it for most of that. hitAt() measures bounding
+     boxes and does not care that they are invisible, so without this the swirl silently
+     picks up pictures you cannot see, pulls them inward and rewrites their spiral angle -
+     and they are somewhere new by the time the page fades back in. That was the "jarring
+     reset on returning home". */
+  if(cardOpen || dragging || open || d>0){ if(hotNode) clearHot() }
+  else if((++tick%3===0)){
+    const hit = (mx<0 || lastPT==='touch' || cornerCore(mx,my))? null : hitAt(mx,my);
+    if(hit && hit!==hotNode) pickUp(hit);
+    else if(!hit && hotNode){
+      /* a picked-up picture drifts inward and can slide off the pointer; keep it in
+         hand until the pointer is clearly away from it */
+      const b=hotNode.box, sl=20;
+      if(!b || mx<b.left-sl || mx>b.right+sl || my<b.top-sl || my>b.bottom+sl) clearHot();
+    }
+  }
+
+  HERO.nodes.forEach(n=>{
+    const on=(n===hotNode);
+    /* one slow, even ease for both directions — calm rather than snappy */
+    /* Ease only while the bloom is on screen. The world hides and returns at the same
+       peel position, but an eased value lags in whichever direction it is travelling -
+       so it arrived at the hide frame short of its target and at the show frame still
+       short coming back, leaving lift ~180px apart at the same q. lift drives the
+       perspective compensation below, so every picture came back displaced. Off screen
+       there is nothing to smooth, so snap. */
+    const liftTo=(-q*320)+(on?LIFT:0);
+    n.lift = worldOn ? n.lift+(liftTo-n.lift)*HERO.ease(0.085) : liftTo;
+    if(on){
+      n.a=n.aHold-(HERO.rot+HERO.rotOffset);     // hold it still in the moving field
+      n.box=n.el.getBoundingClientRect();        // for the release test only
+    }
+    /* Coming forward magnifies about the centre of the screen, which by itself would
+       slide the picture outward as it grows. Cancelling that is what turns the motion
+       into a straight lift instead of a drift-and-correct. */
+    const k=n.lift/(PER-n.z);
+    const compX=-(n.nx||0)*k, compY=-(n.ny||0)*k;
+    const tx=on?(n.pullTX||0):0, ty=on?(n.pullTY||0):0;
+    const eP=HERO.ease(0.085);
+    n.px = worldOn ? (n.px||0)+(tx-(n.px||0))*eP : tx;   // same reasoning as lift
+    n.py = worldOn ? (n.py||0)+(ty-(n.py||0))*eP : ty;
+    if(!on && Math.abs(n.px)<0.3 && Math.abs(n.py)<0.3){ n.px=0; n.py=0 }
+    n.ox=n.px+compX; n.oy=n.py+compY;
+  });
+
+});
+
+</script>
+</body>
+</html>

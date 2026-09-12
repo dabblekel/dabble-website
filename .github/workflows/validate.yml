@@ -1,0 +1,33 @@
+name: Validate site build
+
+# Rebuilds the site whenever content, team data, or the build itself changes.
+# If an entry is malformed (missing image, bad entry.md, untagged card, a credit
+# that doesn't match team.csv, ...) build.py exits with an error and this check
+# turns red on the pull request, with the reason in the log.
+
+on:
+  pull_request:
+    paths:
+      - "content/**"
+      - "team/**"
+      - "hero-peel/**"
+  workflow_dispatch:   # lets you run it by hand from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the image library
+        run: python -m pip install --upgrade pip pillow
+
+      - name: Build the site (fails the check if any entry is invalid)
+        working-directory: hero-peel
+        run: python3 build.py
