@@ -45,7 +45,7 @@
   .card0{break-inside:avoid;display:block;width:100%;padding:0;
       margin:0 0 clamp(16px,2.2vw,26px);border:0;background:none;font:inherit;color:inherit;
       cursor:pointer;text-align:left}
-  .card0 .frame{position:relative;overflow:hidden;background:#e2ddd2}
+  .card0 .frame{display:block;position:relative;overflow:hidden;background:#e2ddd2}
   .card0 .frame img{width:100%;height:auto;
       transition:transform .6s cubic-bezier(.2,.8,.2,1),filter .4s ease}
   .card0:hover .frame img,.card0:focus-visible .frame img{transform:scale(1.03);filter:brightness(.82)}
@@ -56,7 +56,7 @@
   .card0:hover .frame::after,.card0:focus-visible .frame::after{opacity:1}
   /* the title sits over the image in a translucent panel that backs all of its lines,
      larger and in a narrow measure so it reads like the home-page caption */
-  .card0 .q{position:absolute;left:0;bottom:0;z-index:2;max-width:36%;overflow-wrap:break-word;
+  .card0 .q{position:absolute;left:0;bottom:0;z-index:2;width:36%;
       padding:9px 11px;opacity:0;transition:opacity .3s ease;pointer-events:none;color:#fff;
       font-size:clamp(12px,0.95vw,13px);line-height:1.25;letter-spacing:-.02em;font-weight:500;
       text-shadow:0 1px 10px rgba(0,0,0,.5)}
