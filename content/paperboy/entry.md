@@ -1,6 +1,6 @@
 ---
 order: 1
-title: What if local news fosters local identity?
+title: What if local news was built to foster local identity?
 subtitle: Paperboy · 2026
 story: no
 dabbler: yes
