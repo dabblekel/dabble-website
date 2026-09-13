@@ -124,8 +124,9 @@
      gets painted every frame, and it shows up in the frame budget */
   .cap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
       padding:.62em;opacity:0;visibility:hidden;pointer-events:none;
-      transition:opacity .32s ease,visibility 0s linear .32s;
-      background:linear-gradient(0deg,rgba(6,6,10,.72) 0%,rgba(6,6,10,.34) 44%,rgba(6,6,10,0) 78%)}
+      transition:opacity .32s ease,visibility 0s linear .32s;background:none}
+  /* one translucent panel behind all the caption text, hugging its width */
+  .cap .capBox{align-self:flex-start;max-width:100%;padding:.5em .62em;background:rgba(6,6,10,.68)}
   .ph.hot .cap{opacity:1;visibility:visible;transition:opacity .32s ease,visibility 0s}
   .cap .kick{font-size:.34em;letter-spacing:.22em;text-transform:uppercase;font-weight:500;
       color:rgba(255,255,255,.72);margin-bottom:.5em}
@@ -180,6 +181,20 @@
   .caroNum{font-size:10px;letter-spacing:.24em;color:#a0957f;white-space:nowrap}
   .card .meta{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#a0957f;
       border-top:1px solid rgba(20,20,15,.12);padding-top:1.4em}
+  /* who made it - a portrait, role and bio for each credited member (matches the galleries) */
+  .crew{margin-top:2em;border-top:1px solid rgba(20,20,15,.12);padding-top:1.7em}
+  .crew b{display:block;font-weight:500;font-size:9.5px;letter-spacing:.24em;
+      text-transform:uppercase;color:#a0957f;margin-bottom:1.4em}
+  .crewGrid{display:grid;grid-template-columns:1fr;gap:clamp(32px,4.2vw,48px);
+      max-width:64ch;font-size:clamp(13px,1.05vw,14.5px)}
+  .member{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:start}
+  .member img,.member .noshot{width:64px;height:64px;object-fit:cover;background:#e2ddd2}
+  .member .mn{font-size:13px;font-weight:500;color:#14140f;letter-spacing:-.01em}
+  .member .mr{display:block;font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+      color:#a0957f;margin-top:6px}
+  .member .mb{display:block;font-size:11.5px;line-height:1.7;color:#6b6555;margin-top:9px}
+  .member .mb .bl{display:block}
+  .member .mb .bl + .bl{margin-top:.85em}
   .x{position:absolute;top:0;right:0;z-index:3;appearance:none;border:0;cursor:pointer;
       background:rgba(243,239,231,.9);backdrop-filter:blur(6px);color:#14140f;font-family:inherit;
       font-size:10px;letter-spacing:.26em;text-transform:uppercase;padding:14px 18px;
@@ -234,6 +249,7 @@
           <div id="cCopy"></div>
           <div id="cCaro"></div>
           <div class="meta" id="cMeta"></div>
+          <div id="cCrew"></div>
         </div>
       </div>
     </article>
@@ -377,7 +393,8 @@ const under=document.getElementById('under'), underList=document.getElementById(
       ovl=document.getElementById('ovl'), card=document.getElementById('card'),
       cShot=document.getElementById('cShot'), cKick=document.getElementById('cKick'),
       cQ=document.getElementById('cQ'), cCopy=document.getElementById('cCopy'),
-      cMeta=document.getElementById('cMeta'), cCaro=document.getElementById('cCaro');
+      cMeta=document.getElementById('cMeta'), cCaro=document.getElementById('cCaro'),
+      cCrew=document.getElementById('cCrew');
 
 /* Pressing no longer pushes the pictures at you — a press is now the start of reading one. */
 HERO.diveOnHold=false;
@@ -492,7 +509,7 @@ HERO.nodes.forEach(n=>{
   n.el.style.fontSize=F.toFixed(1)+'px';
   const cap=document.createElement('div');
   cap.className='cap';
-  cap.innerHTML='<span class="kick">'+st.k+'</span><span class="q">'+st.q+'</span>';
+  cap.innerHTML='<span class="capBox"><span class="kick">'+st.k+'</span><span class="q">'+st.q+'</span></span>';
   n.el.appendChild(cap);
   n.el.__node=n;
 
@@ -573,6 +590,27 @@ const linkifyH = function(str){ return String(str).replace(/(https?:\/\/[^\s<]+)
   return '<a href="'+u+'" target="_blank" rel="noopener">'+u+'</a>'+(tl?tl[0]:''); }); };
 const parasH = function(t){ return String(t||'').split(/\n\s*\n/).map(function(x){return x.trim();}).filter(Boolean)
   .map(function(x){ return '<p>'+linkifyH(escH(x))+'</p>'; }).join(''); };
+/* the project team, resolved from credits against TEAM - same as the gallery pages */
+const TEAM_BY_NAME = {};
+(typeof TEAM!=='undefined'?TEAM:[]).forEach(function(m){ TEAM_BY_NAME[String(m.name).trim().toLowerCase()]=m; });
+const bioHtmlH = function(t){ return String(t||'').split(/\n+/).map(function(x){return x.trim();}).filter(Boolean)
+  .map(function(x){ return '<span class="bl">'+escH(x)+'</span>'; }).join(''); };
+const memberH = function(m){
+  const shot = m.photo ? '<img loading="lazy" src="'+escH(m.photo)+'" alt="'+escH(m.name)+'">'
+                       : '<span class="noshot"></span>';
+  return '<div class="member">'+shot+'<div>'
+       + '<span class="mn">'+escH(m.name)+'</span>'
+       + (m.role?'<span class="mr">'+escH(m.role)+'</span>':'')
+       + (m.bio ?'<span class="mb">'+bioHtmlH(m.bio)+'</span>':'')
+       + '</div></div>'; };
+const crewHtml = function(credits){
+  if(!credits || !credits.length) return '';
+  const crew = credits.map(function(c){
+    const m = TEAM_BY_NAME[String(c).trim().toLowerCase()];
+    return m ? {name:m.name, role:m.role, bio:m.bio, photo:m.photo}
+             : {name:c, role:'', bio:'', photo:null}; });
+  return '<div class="crew"><b>Project Team</b><div class="crewGrid">'
+       + crew.map(memberH).join('') + '</div></div>'; };
 function buildCaro(list){
   if(!list || !list.length){ cCaro.innerHTML=''; caro=null; return; }
   const slides = list.map(function(im){ return '<div class="caroSlide"><img loading="lazy" src="'+escH(im.src)+'" alt=""></div>'; }).join('');
@@ -629,6 +667,7 @@ function openStory(n){
                   + (st.below ? parasH(st.below) : '');
   buildCaro(st.carousel);
   cMeta.textContent = st.caption || '';
+  cCrew.innerHTML = crewHtml(st.credits);
   ovl.classList.add('on');
   HERO.wheelLocked=true;                          // the wheel scrolls the story, not the bloom
   ovl.querySelector('.cardScroll').scrollTop=0;

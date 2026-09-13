@@ -276,12 +276,8 @@ document.getElementById('faces').addEventListener('click',e=>{
 document.getElementById('x').addEventListener('click',closeProfile);
 ovl.addEventListener('click',e=>{ if(e.target===ovl) closeProfile() });
 addEventListener('keydown',e=>{ if(e.key==='Escape') closeProfile() });
-/* the lift takes the whole screen; a profile card left open underneath would show
-   through the sky, so put it away as soon as the corner is touched */
-addEventListener('pointerdown',e=>{
-  const corner=((innerWidth-e.clientX)+(innerHeight-e.clientY))<340;
-  if(corner && open) closeProfile();
-},true);
+/* Closing is only the backdrop outside the card, the Close button, or Escape - so
+   scrolling the profile on touch never dismisses it. */
 </script>
 <script>
 

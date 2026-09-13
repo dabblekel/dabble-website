@@ -49,14 +49,21 @@
   .card0 .frame img{width:100%;height:auto;
       transition:transform .6s cubic-bezier(.2,.8,.2,1),filter .4s ease}
   .card0:hover .frame img,.card0:focus-visible .frame img{transform:scale(1.03);filter:brightness(.82)}
-  .card0 .q{position:absolute;inset:0;display:flex;align-items:flex-end;padding:16px 15px;
-      opacity:0;transition:opacity .3s ease;pointer-events:none;color:#fff;
-      font-size:12.5px;line-height:1.4;letter-spacing:-.01em;font-weight:500;
-      background:linear-gradient(0deg,rgba(12,10,8,.82) 0%,rgba(12,10,8,.30) 52%,rgba(12,10,8,0) 84%)}
+  /* the shadow behind the title: a full-height band on the left that fades out on its right edge */
+  .card0 .frame::after{content:"";position:absolute;left:0;top:0;bottom:0;width:55%;z-index:1;
+      opacity:0;transition:opacity .3s ease;pointer-events:none;
+      background:linear-gradient(90deg,rgba(12,10,8,.72) 0%,rgba(12,10,8,.72) 64%,rgba(12,10,8,0) 100%)}
+  .card0:hover .frame::after,.card0:focus-visible .frame::after{opacity:1}
+  /* the title sits over the image in a translucent panel that backs all of its lines,
+     larger and in a narrow measure so it reads like the home-page caption */
+  .card0 .q{position:absolute;left:0;bottom:0;z-index:2;max-width:36%;overflow-wrap:break-word;
+      padding:9px 11px;opacity:0;transition:opacity .3s ease;pointer-events:none;color:#fff;
+      font-size:clamp(12px,0.95vw,13px);line-height:1.25;letter-spacing:-.02em;font-weight:500;
+      text-shadow:0 1px 10px rgba(0,0,0,.5)}
   .card0:hover .q,.card0:focus-visible .q{opacity:1}
   .card0 .nm{display:block;font-size:11.5px;letter-spacing:.03em;color:#4a463c;margin-top:11px}
   .card0:focus-visible{outline:2px solid #14140f;outline-offset:3px}
-  @media(hover:none){ .card0 .q{opacity:1} }
+  @media(hover:none){ .card0 .q{opacity:1} .card0 .frame::after{opacity:1} }
 
   .empty{font-size:13px;color:#6b6555;line-height:1.9}
 
@@ -352,11 +359,9 @@ addEventListener('keydown',ev=>{
   else if(ev.key==='ArrowLeft'  && caro) caroGo(caro.i-1);
   else if(ev.key==='ArrowRight' && caro) caroGo(caro.i+1);
 });
-/* the lift owns the corner; a case left open underneath would show through the sky */
-addEventListener('pointerdown',ev=>{
-  const corner=((innerWidth-ev.clientX)+(innerHeight-ev.clientY))<340;
-  if(corner && open) closeCase();
-},true);
+/* Closing is only the backdrop outside the card (handled above), the Close button, or
+   Escape - so scrolling the card on touch never dismisses it. (A broad corner hit-zone
+   used to close it here, which swallowed scroll gestures near the corner.) */
 
 /* deep link from Our Team: open a specific entry's case study on arrival */
 {
