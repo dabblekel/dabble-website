@@ -5,11 +5,13 @@ subtitle: Sunny Ears · 2026
 story: no
 dabbler: yes
 credits:
+  -Rishika Gundi
   -Anastasha Rachel Gunawan
+  -Shawn Smith
   -Julia Hou
   -Sanzhar Myrzagalym
-  -Shawn Smith
   -Yousef Al-Riyami
+
 caption: 
 ---
 
