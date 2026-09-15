@@ -1,22 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 112">
-  <defs>
-    <style>
-      .cls-1 {
-        fill: #fff;
-      }
-
-      .cls-2 {
-        fill: none;
-        stroke: #000;
-        stroke-width: 10px;
-      }
-    </style>
-  </defs>
-  <rect class="cls-1" width="118" height="112"/>
-  <g id="Layer_1" data-name="Layer 1">
-    <circle class="cls-2" cx="59" cy="56" r="45"/>
-    <path d="M58.41,32.87c-3.28,0-6.27,1.88-6.27,5.64s2.99,5.72,6.27,5.72,6.27-1.89,6.27-5.72-2.99-5.64-6.27-5.64Z"/>
-    <polygon points="68 73 68 82 52.83 82 52.83 48.34 63.99 48.34 63.99 73 68 73"/>
+  <g fill="none" stroke="#000" stroke-width="10" stroke-linecap="round">
+    <line x1="18" y1="32" x2="100" y2="32"/>
+    <line x1="18" y1="56" x2="100" y2="56"/>
+    <line x1="18" y1="80" x2="100" y2="80"/>
   </g>
 </svg>
