@@ -3,7 +3,7 @@
   {
    "id": 0,
    "slug": "paperboy",
-   "title": "What if local news was a locals-only club?",
+   "title": "What if local news was built to foster local identity?",
    "subtitle": "Paperboy \u00b7 2026",
    "story": false,
    "dabbler": true,
@@ -24,10 +24,11 @@
    "story": false,
    "dabbler": true,
    "credits": [
+    "Rishika Gundi",
     "Anastasha Rachel Gunawan",
+    "Shawn Smith",
     "Julia Hou",
     "Sanzhar Myrzagalym",
-    "Shawn Smith",
     "Yousef Al-Riyami"
    ],
    "supporting": 1,
@@ -299,6 +300,12 @@
    "bio": "A design engineer passionate about improving health through technologies & the systems that govern them. An artist experimenting with new mediums, a collector of languages, a child who loves to play with her food. Will take you up on a game of basketball, tennis or volleyball anytime. \n\nExpertise: CAD, Electromechanical Design, Graphic Design, Medical Device Design + Manufacture + Regulatory, Healthcare (FDA & CMS) Policy",
    "photo": "assets/team/rishika.jpg",
    "projects": [
+    {
+     "slug": "sunny ears",
+     "name": "Sunny Ears \u00b7 2026",
+     "url": "dabblers.html#sunny%20ears",
+     "img": "assets/sunny%20ears/main.jpg"
+    },
     {
      "slug": "illuminate",
      "name": "Illuminate Pain \u00b7 2026",

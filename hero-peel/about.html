@@ -48,6 +48,7 @@
       color:var(--mute);pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .5s ease;
       transform:translateY(-50%)}
   .movehint.on{opacity:.8}
+  .movehint .darr{display:inline-block;letter-spacing:0;font-size:12px;line-height:1;transform:translateY(1px)}
 
   /* copy placement per scene (text sits in its own band above the interactive stage) */
   #s1 .page-title{position:static;z-index:auto;margin:0 auto;max-width:1180px;padding:clamp(56px,9vh,104px) clamp(22px,5vw,56px) 0;
@@ -208,7 +209,7 @@
     <div class="stage">
       <canvas class="ascii"></canvas>
       <svg class="art" id="art3"></svg>
-      <div class="movehint" id="mh-ground">drag me!</div>
+      <div class="movehint" id="mh-ground">drag me <span class="darr">&#8595;</span></div>
     </div>
   </section>
 </main>
@@ -833,7 +834,7 @@ function Scene3(){
   function showHint(){
     if(hintShown||hintGone||!hintEl)return;
     hintShown=true;
-    const hx=W*0.28, hy=surfY(hx);
+    const hx=(W<=680?W*0.06:W*0.28), hy=surfY(hx);
     hintEl.style.left=hx.toFixed(0)+"px";
     hintEl.style.top=(hy-26).toFixed(0)+"px";
     hintEl.classList.add("on");
@@ -919,7 +920,7 @@ const scenes=[Scene1(),Scene2(),Scene3()];
 const active=new Set();
 function buildAll(){ scenes.forEach(s=>s.build()); }
 buildAll();
-addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(buildAll,180); });
+let _rzW=innerWidth; addEventListener("resize",()=>{ if(innerWidth===_rzW) return; _rzW=innerWidth; clearTimeout(window._rz); window._rz=setTimeout(buildAll,180); });
 
 const io=new IntersectionObserver((ents)=>{
   ents.forEach(e=>{

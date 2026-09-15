@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a project · dabble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  :root{--ink:#14140f;--soft:#3b3830;--mute:#6b6555;--faint:#a0957f;--paper:#f3efe7;--line:rgba(20,20,15,.18)}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);
+      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;-webkit-font-smoothing:antialiased;
+      line-height:1.5;font-size:14px}
+  .wrap{max-width:720px;margin:0 auto;padding:clamp(28px,6vw,64px) clamp(18px,5vw,40px) 120px}
+  h1{font-weight:700;letter-spacing:-.03em;font-size:clamp(1.7rem,5vw,2.4rem);line-height:1.05;margin:0 0 .5em}
+  .sub{color:var(--soft);margin:0 0 2.2em;max-width:60ch}
+  h2{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);
+      font-weight:700;margin:2.4em 0 1.1em;padding-bottom:.7em;border-bottom:1px solid var(--line)}
+  label{display:block;font-weight:500;margin:1.2em 0 .4em}
+  .hint{font-weight:400;color:var(--mute);font-size:12px;margin-top:.25em}
+  input[type=text],input[type=number],input[type=password],textarea,select{
+      width:100%;font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);
+      border-radius:0;padding:11px 13px}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:-1px;border-color:var(--ink)}
+  textarea{min-height:96px;resize:vertical;line-height:1.6}
+  .row{display:flex;gap:20px;flex-wrap:wrap}
+  .row>div{flex:1 1 220px}
+  .checks{display:flex;gap:26px;flex-wrap:wrap;margin-top:.5em}
+  .check{display:flex;align-items:center;gap:9px;font-weight:500}
+  .check input{width:18px;height:18px;accent-color:var(--ink)}
+  .filebtn{display:inline-block;border:1px solid var(--ink);background:#fff;padding:9px 16px;cursor:pointer;
+      font-weight:500;transition:background .15s,color .15s}
+  .filebtn:hover{background:var(--ink);color:var(--paper)}
+  input[type=file]{display:none}
+  .thumbs{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+  .thumb{display:grid;grid-template-columns:74px 1fr auto;gap:14px;align-items:center;
+      border:1px solid var(--line);background:#fff;padding:10px}
+  .thumb img{width:74px;height:74px;object-fit:cover;background:#e2ddd2;display:block}
+  .thumb input{margin:0}
+  .thumb .ctrls{display:flex;gap:6px}
+  .iconbtn{border:1px solid var(--line);background:#fff;width:34px;height:34px;cursor:pointer;font-size:15px;
+      line-height:1;color:var(--ink)}
+  .iconbtn:hover{background:var(--ink);color:var(--paper)}
+  .mainprev{margin-top:14px}
+  .mainprev img{max-width:220px;height:auto;border:1px solid var(--line);display:block}
+  details.settings{border:1px solid var(--line);background:#efe9dd;padding:2px 16px 14px;margin:0 0 1.4em}
+  details.settings summary{cursor:pointer;font-weight:500;padding:13px 0;list-style:none}
+  details.settings summary::-webkit-details-marker{display:none}
+  details.settings summary::before{content:"▸ ";color:var(--faint)}
+  details.settings[open] summary::before{content:"▾ "}
+  .preview{background:#14140f;color:#e9e4d8;padding:16px 18px;white-space:pre-wrap;word-break:break-word;
+      font-size:12.5px;line-height:1.7;overflow:auto;max-height:340px;border-radius:0}
+  .actions{position:sticky;bottom:0;background:linear-gradient(0deg,var(--paper) 72%,rgba(243,239,231,0));
+      padding:20px 0 8px;margin-top:2.4em;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:14px 26px;cursor:pointer;
+      font:inherit;font-weight:600;letter-spacing:.02em;transition:opacity .15s}
+  .btn:hover{opacity:.86}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--ink)}
+  .status{margin-top:1.2em;padding:14px 16px;border:1px solid var(--line);background:#fff;font-size:13px;
+      display:none;white-space:pre-wrap}
+  .status.show{display:block}
+  .status.ok{border-color:#2c7a3f;background:#eef6ef}
+  .status.err{border-color:#a3402f;background:#f8ece9}
+  .status a{color:var(--ink);font-weight:600}
+  .req{color:#a3402f}
+  a{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Add a project to dabble</h1>
+  <p class="sub">Fill this in to add a new “what if” project to the site. When you submit, it opens a
+  Pull Request on GitHub for Kel to review and publish — you don’t need to touch any code or files.</p>
+
+  <details class="settings" id="repoSettings">
+    <summary>Repository &amp; access token (set once)</summary>
+    <div class="row">
+      <div><label>GitHub owner<input type="text" id="owner" placeholder="dabblekel"></label></div>
+      <div><label>Repository name<input type="text" id="repo" placeholder="dabble-website"></label></div>
+    </div>
+    <div class="row">
+      <div><label>Base branch<input type="text" id="base" placeholder="main" value="main"></label></div>
+      <div><label>Content folder<input type="text" id="cpath" placeholder="content" value="content"></label></div>
+    </div>
+    <label>GitHub access token
+      <input type="password" id="token" placeholder="github_pat_… or ghp_…" autocomplete="off">
+    </label>
+    <p class="hint">A fine-grained token scoped to this one repository, with <b>Contents</b> and
+    <b>Pull requests</b> set to “Read and write.” It is stored only in this browser and never leaves it.
+    <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">Create a token →</a>
+    <button type="button" class="iconbtn" id="clearTok" title="Forget token" style="width:auto;padding:4px 10px;margin-left:8px">forget</button></p>
+  </details>
+
+  <h2>The project</h2>
+
+  <label>The “what if” question <span class="req">*</span>
+    <input type="text" id="title" placeholder="What if local news was a locals-only club?">
+    <span class="hint">The big question shown as the heading on the card.</span>
+  </label>
+
+  <label>Project name &amp; year <span class="req">*</span>
+    <input type="text" id="subtitle" placeholder="Paperboy · 2026">
+    <span class="hint">The short line above the title. Keep it short — it’s also the credit label.</span>
+  </label>
+
+  <div class="row">
+    <div><label>Folder name (slug)
+      <input type="text" id="slug" placeholder="paperboy">
+      <span class="hint">Auto-filled from the name. Letters, numbers, hyphens.</span>
+    </label></div>
+    <div><label>Order (optional)
+      <input type="number" id="order" placeholder="leave blank to add at the end">
+      <span class="hint">Lower shows earlier. Blank = end.</span>
+    </label></div>
+  </div>
+
+  <label>Where does it appear? <span class="req">*</span></label>
+  <div class="checks">
+    <span class="check"><input type="checkbox" id="story"> Stories</span>
+    <span class="check"><input type="checkbox" id="dabbler"> Dabblers</span>
+  </div>
+  <p class="hint">Tick one or both. Stories = your team’s own projects; Dabblers = client work.</p>
+
+  <h2>The story</h2>
+
+  <label>Intro copy — above the images
+    <textarea id="above" placeholder="A paragraph or two introducing the project. Leave a blank line between paragraphs."></textarea>
+  </label>
+  <label>Closing copy — below the images
+    <textarea id="below" placeholder="What came of it, the outcome, the reflection."></textarea>
+  </label>
+  <label>Caption (optional)
+    <input type="text" id="caption" placeholder="Title image credit, source, date">
+    <span class="hint">Small line at the very bottom of the card.</span>
+  </label>
+
+  <h2>People</h2>
+  <label>Credits — one name per line
+    <textarea id="credits" placeholder="Yousef Al-Riyami&#10;Kel Huang"></textarea>
+    <span class="hint">Use each person’s name exactly as it appears on the Our Team page so their photo &amp; bio link up.</span>
+  </label>
+
+  <h2>Images</h2>
+  <label>Main image <span class="req">*</span> — the one that floats on the front page</label>
+  <label class="filebtn" for="mainFile">Choose main image</label>
+  <input type="file" id="mainFile" accept="image/*">
+  <div class="mainprev" id="mainPrev"></div>
+
+  <label style="margin-top:1.8em">Supporting images (optional) — shown inside the opened card</label>
+  <label class="filebtn" for="supFiles">Add supporting images</label>
+  <input type="file" id="supFiles" accept="image/*" multiple>
+  <div class="thumbs" id="supThumbs"></div>
+
+  <label style="margin-top:1.8em">Carousel images (optional) — extra images shown as a compact slideshow</label>
+  <label class="filebtn" for="caroFiles">Add carousel images</label>
+  <input type="file" id="caroFiles" accept="image/*" multiple>
+  <div class="thumbs" id="caroThumbs"></div>
+
+  <h2>Preview — entry.md</h2>
+  <div class="preview" id="preview"></div>
+
+  <div class="actions">
+    <button class="btn" id="prBtn">Open a Pull Request</button>
+    <button class="btn ghost" id="zipBtn">Download folder (.zip) instead</button>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LS = 'dabble-add-project';
+
+/* ---------- settings persistence ---------- */
+function loadSettings(){
+  try{
+    const s = JSON.parse(localStorage.getItem(LS)||'{}');
+    if(s.owner) $('owner').value=s.owner;
+    if(s.repo) $('repo').value=s.repo;
+    if(s.base) $('base').value=s.base;
+    if(s.cpath) $('cpath').value=s.cpath;
+    if(s.token) $('token').value=s.token;
+    if(!s.owner || !s.repo || !s.token) $('repoSettings').open = true;
+  }catch(e){ $('repoSettings').open = true; }
+}
+function saveSettings(){
+  try{ localStorage.setItem(LS, JSON.stringify({
+    owner:$('owner').value.trim(), repo:$('repo').value.trim(), base:$('base').value.trim()||'main',
+    cpath:$('cpath').value.trim()||'content', token:$('token').value.trim()
+  })); }catch(e){}
+}
+['owner','repo','base','cpath','token'].forEach(id=>$(id).addEventListener('input',saveSettings));
+$('clearTok').addEventListener('click',()=>{ $('token').value=''; saveSettings(); setStatus('Token forgotten from this browser.',''); });
+
+/* ---------- slug ---------- */
+const slugify = s => String(s).toLowerCase().trim()
+  .replace(/[·•]/g,' ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
+let slugTouched=false;
+$('slug').addEventListener('input',()=>{slugTouched=true;});
+function autoSlug(){
+  if(slugTouched) return;
+  const base = $('subtitle').value.split(/[·•]/)[0] || $('title').value;
+  $('slug').value = slugify(base);
+}
+$('subtitle').addEventListener('input',()=>{autoSlug();updatePreview();});
+$('title').addEventListener('input',()=>{autoSlug();updatePreview();});
+
+/* ---------- image handling: downscale to <=2560, JPEG ---------- */
+function processImage(file, maxEdge=2560, quality=0.85){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let {width:w,height:h} = img;
+      const scale = Math.min(1, maxEdge/Math.max(w,h));
+      w=Math.round(w*scale); h=Math.round(h*scale);
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>{
+        const fr=new FileReader();
+        fr.onload=()=>resolve({dataUrl:c.toDataURL('image/jpeg',0.7), b64:fr.result.split(',')[1], bytes:b.size});
+        fr.readAsDataURL(b);
+      },'image/jpeg',quality);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not read image: '+file.name));};
+    img.src=url;
+  });
+}
+
+/* ---------- main image ---------- */
+let mainImg=null;
+$('mainFile').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  setStatus('Processing image…','');
+  try{ mainImg=await processImage(f);
+    $('mainPrev').innerHTML='<img src="'+mainImg.dataUrl+'" alt=""><div class="hint">'+(mainImg.bytes/1024|0)+' KB · saved as main.jpg</div>';
+    setStatus('',''); validateUI();
+  }catch(err){ setStatus(err.message,'err'); }
+});
+
+/* ---------- supporting & carousel lists ---------- */
+function makeList(inputId, containerId){
+  const items=[];
+  const cont=$(containerId);
+  $(inputId).addEventListener('change', async e=>{
+    for(const f of e.target.files){
+      try{ const im=await processImage(f); items.push({im, caption:''}); }catch(err){ setStatus(err.message,'err'); }
+    }
+    e.target.value=''; render();
+  });
+  function render(){
+    cont.innerHTML='';
+    items.forEach((it,i)=>{
+      const row=document.createElement('div'); row.className='thumb';
+      row.innerHTML='<img src="'+it.im.dataUrl+'" alt="">'
+        +'<input type="text" placeholder="Caption (optional)" value="'+it.caption.replace(/"/g,'&quot;')+'">'
+        +'<div class="ctrls"><button class="iconbtn" title="Up">↑</button>'
+        +'<button class="iconbtn" title="Down">↓</button>'
+        +'<button class="iconbtn" title="Remove">✕</button></div>';
+      const [cap]=row.querySelectorAll('input');
+      const [up,down,rm]=row.querySelectorAll('.iconbtn');
+      cap.addEventListener('input',()=>it.caption=cap.value);
+      up.addEventListener('click',()=>{ if(i>0){[items[i-1],items[i]]=[items[i],items[i-1]];render();} });
+      down.addEventListener('click',()=>{ if(i<items.length-1){[items[i+1],items[i]]=[items[i],items[i+1]];render();} });
+      rm.addEventListener('click',()=>{ items.splice(i,1);render(); });
+      cont.appendChild(row);
+    });
+  }
+  return items;
+}
+const supItems = makeList('supFiles','supThumbs');
+const caroItems = makeList('caroFiles','caroThumbs');
+
+/* ---------- entry.md ---------- */
+function entryMd(){
+  const g=id=>$(id).value.trim();
+  const creds = g('credits').split('\n').map(s=>s.trim()).filter(Boolean);
+  let fm='---\n';
+  if(g('order')!=='') fm+='order: '+g('order')+'\n';
+  fm+='title: '+g('title')+'\n';
+  fm+='subtitle: '+g('subtitle')+'\n';
+  fm+='story: '+($('story').checked?'yes':'no')+'\n';
+  fm+='dabbler: '+($('dabbler').checked?'yes':'no')+'\n';
+  if(creds.length){ fm+='credits:\n'+creds.map(c=>'  - '+c).join('\n')+'\n'; }
+  if(g('caption')) fm+='caption: '+g('caption')+'\n';
+  fm+='---\n\n:: ABOVE ::\n\n'+(g('above')||'')+'\n\n:: BELOW ::\n\n'+(g('below')||'')+'\n';
+  return fm;
+}
+function updatePreview(){ $('preview').textContent=entryMd(); }
+['order','title','subtitle','caption','above','below','credits'].forEach(id=>$(id).addEventListener('input',updatePreview));
+['story','dabbler'].forEach(id=>$(id).addEventListener('change',()=>{updatePreview();validateUI();}));
+
+/* ---------- gather files for a project folder ---------- */
+function gatherFiles(){
+  const slug=slugify($('slug').value||$('subtitle').value);
+  const base='content/'+slug+'/';
+  const files=[]; // {path, b64?, text?}
+  files.push({path:base+'entry.md', text:entryMd()});
+  files.push({path:base+'main/main.jpg', b64:mainImg.b64});
+  supItems.forEach((it,i)=>{
+    const n=String(i+1).padStart(2,'0');
+    files.push({path:base+'supporting/'+n+'.jpg', b64:it.im.b64});
+    if(it.caption.trim()) files.push({path:base+'supporting/'+n+'.txt', text:it.caption.trim()+'\n'});
+  });
+  caroItems.forEach((it,i)=>{
+    const n=String(i+1).padStart(2,'0');
+    files.push({path:base+'supporting/carousel/'+n+'.jpg', b64:it.im.b64});
+    if(it.caption.trim()) files.push({path:base+'supporting/carousel/'+n+'.txt', text:it.caption.trim()+'\n'});
+  });
+  return {slug, files};
+}
+
+/* ---------- validation ---------- */
+function problems(){
+  const p=[];
+  if(!$('title').value.trim()) p.push('a “what if” question');
+  if(!$('subtitle').value.trim()) p.push('a project name');
+  if(!$('story').checked && !$('dabbler').checked) p.push('Stories and/or Dabblers ticked');
+  if(!mainImg) p.push('a main image');
+  return p;
+}
+function validateUI(){
+  const ok=problems().length===0;
+  $('prBtn').disabled=false; $('zipBtn').disabled=!ok;
+  return ok;
+}
+
+/* ---------- status ---------- */
+function setStatus(msg,kind){
+  const s=$('status'); s.className='status'+(msg?' show':'')+(kind?' '+kind:'');
+  s.innerHTML=msg;
+}
+
+/* ---------- base64 of utf-8 text ---------- */
+const b64text = t => btoa(unescape(encodeURIComponent(t)));
+
+/* ---------- GitHub API ---------- */
+async function gh(path, opts={}){
+  const owner=$('owner').value.trim(), repo=$('repo').value.trim(), token=$('token').value.trim();
+  const res=await fetch('https://api.github.com/repos/'+owner+'/'+repo+path,{
+    ...opts,
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json',
+             'X-GitHub-Api-Version':'2022-11-28',...(opts.headers||{})}
+  });
+  if(!res.ok){ let d=''; try{d=(await res.json()).message||'';}catch(e){} throw new Error('GitHub '+res.status+': '+(d||res.statusText)); }
+  return res.status===204?null:res.json();
+}
+
+async function openPR(){
+  const miss=problems();
+  if(miss.length){ setStatus('Please add: '+miss.join(', ')+'.','err'); return; }
+  const owner=$('owner').value.trim(), repo=$('repo').value.trim(), token=$('token').value.trim(), base=$('base').value.trim()||'main';
+  if(!owner||!repo||!token){ $('repoSettings').open=true; setStatus('Fill in the repository owner, name, and access token (top of the form).','err'); return; }
+  $('prBtn').disabled=true;
+  try{
+    const {slug,files}=gatherFiles();
+    setStatus('Checking for an existing project with that name…','');
+    // optional: warn if the folder already exists on base
+    try{ await gh('/contents/content/'+encodeURIComponent(slug)+'?ref='+encodeURIComponent(base));
+         if(!confirm('A project folder “'+slug+'” already exists. Continue and let Kel sort it out?')){ $('prBtn').disabled=false; setStatus('Cancelled — change the folder name (slug) and try again.',''); return; }
+    }catch(e){ /* 404 = good, does not exist */ }
+
+    setStatus('Preparing your submission…','');
+    const ref=await gh('/git/ref/heads/'+encodeURIComponent(base));
+    const baseSha=ref.object.sha;
+    const baseCommit=await gh('/git/commits/'+baseSha);
+    const baseTree=baseCommit.tree.sha;
+
+    setStatus('Uploading '+files.length+' files…','');
+    const tree=[];
+    for(const f of files){
+      const blob=await gh('/git/blobs',{method:'POST',body:JSON.stringify(
+        f.text!==undefined ? {content:b64text(f.text),encoding:'base64'} : {content:f.b64,encoding:'base64'})});
+      tree.push({path:f.path,mode:'100644',type:'blob',sha:blob.sha});
+    }
+    const newTree=await gh('/git/trees',{method:'POST',body:JSON.stringify({base_tree:baseTree,tree})});
+    const title=$('title').value.trim(), subtitle=$('subtitle').value.trim();
+    const commit=await gh('/git/commits',{method:'POST',body:JSON.stringify({
+      message:'Add project: '+subtitle, tree:newTree.sha, parents:[baseSha]})});
+    const branch='add-'+slug+'-'+Date.now().toString(36);
+    await gh('/git/refs',{method:'POST',body:JSON.stringify({ref:'refs/heads/'+branch,sha:commit.sha})});
+
+    setStatus('Opening the Pull Request…','');
+    const body='New project submitted through the Add-a-Project form.\n\n'
+      +'- **'+subtitle+'** — '+title+'\n'
+      +'- Stories: '+($('story').checked?'yes':'no')+' · Dabblers: '+($('dabbler').checked?'yes':'no')+'\n\n'
+      +'The site rebuild check will run automatically. Review and merge to publish.';
+    const pr=await gh('/pulls',{method:'POST',body:JSON.stringify({
+      title:'Add project: '+subtitle, head:branch, base, body})});
+    setStatus('✓ Submitted! Your project is now a Pull Request for Kel to review:\n\n'
+      +'<a href="'+pr.html_url+'" target="_blank" rel="noopener">'+pr.html_url+'</a>','ok');
+  }catch(err){
+    setStatus('Something went wrong:\n'+err.message
+      +'\n\nCheck the repository name and that your token has Contents + Pull requests write access. '
+      +'You can also use “Download folder (.zip) instead”.','err');
+    $('prBtn').disabled=false;
+  }
+}
+
+/* ---------- zip fallback ---------- */
+async function downloadZip(){
+  const miss=problems();
+  if(miss.length){ setStatus('Please add: '+miss.join(', ')+'.','err'); return; }
+  if(typeof JSZip==='undefined'){ setStatus('The zip library couldn’t load (check your connection). Please use “Open a Pull Request” instead.','err'); return; }
+  const {slug,files}=gatherFiles();
+  const zip=new JSZip();
+  files.forEach(f=>{ zip.file(f.path, f.text!==undefined?f.text:f.b64, f.text!==undefined?{}:{base64:true}); });
+  const blob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slug+'.zip';
+  document.body.appendChild(a); a.click(); a.remove();
+  setStatus('Downloaded '+slug+'.zip — it contains content/'+slug+'/. Send it to Kel, or unzip it into the site’s content folder.','ok');
+}
+
+$('prBtn').addEventListener('click',openPR);
+$('zipBtn').addEventListener('click',downloadZip);
+
+loadSettings(); autoSlug(); updatePreview(); validateUI();
+</script>
+</body>
+</html>

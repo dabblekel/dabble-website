@@ -8,6 +8,24 @@ maintainer merges it.
 
 ---
 
+## Easiest way: the Add-a-Project form
+
+The simplest way to add a project — no folders, no `entry.md`, no Git — is the
+**Add-a-Project form**, published with the site at **`/add-project.html`**
+(for example `https://<your-site>/add-project.html`). You can also open the
+`hero-peel/add-project.html` file in a browser.
+
+Fill in the fields, upload the images, and click **Download project folder
+(.zip)**. The form packages everything into a small `.zip` file (the images are
+resized for the web automatically) and saves it to your computer. Send that
+`.zip` to a maintainer — there's nothing to install and no login. The maintainer
+unzips it into `content/` and publishes it.
+
+The rest of this document explains the underlying folder format, for anyone
+adding a project by hand.
+
+---
+
 ## What a card is made of
 
 ```
