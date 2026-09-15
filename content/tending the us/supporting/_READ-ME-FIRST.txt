@@ -1,0 +1,10 @@
+Any number of images (including none). They appear between the two blocks of copy on the
+card, each at full width and its own proportions, and never in the swirl. They are shown
+in filename order, so name them 01-..., 02-... to control the sequence.
+
+To caption one, put a text file of the same name beside it:
+
+    01-workshop.jpg
+    01-workshop.txt      <- one line, prints in small caps under the image
+
+A .txt with no matching image - this file, for instance - is ignored.
