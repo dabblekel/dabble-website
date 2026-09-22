@@ -165,6 +165,32 @@
    ],
    "supporting": 2,
    "carousel": 5
+  },
+  {
+   "id": 12,
+   "slug": "tending the us",
+   "title": "What if we are tenders all along?",
+   "subtitle": "Tending the Us \u00b7 2026",
+   "story": true,
+   "dabbler": false,
+   "credits": [
+    "Julia Hou"
+   ],
+   "supporting": 3,
+   "carousel": 0
+  },
+  {
+   "id": 13,
+   "slug": "Tunyumye By The Fire",
+   "title": "What if we made time for each other again?",
+   "subtitle": "Tunyumye By The Fire \u00b7 2026",
+   "story": true,
+   "dabbler": false,
+   "credits": [
+    "Maggie Namaganda"
+   ],
+   "supporting": 2,
+   "carousel": 0
   }
  ],
  "team": [
@@ -251,6 +277,12 @@
      "name": "Sunny Ears \u00b7 2026",
      "url": "dabblers.html#sunny%20ears",
      "img": "assets/sunny%20ears/main.jpg"
+    },
+    {
+     "slug": "tending the us",
+     "name": "Tending the Us \u00b7 2026",
+     "url": "stories.html#tending%20the%20us",
+     "img": "assets/tending%20the%20us/main.jpg"
     }
    ]
   },
@@ -283,7 +315,7 @@
   {
    "name": "Maggie Namaganda",
    "role": "",
-   "bio": "",
+   "bio": "Loves: Stories, loud laughter, good food, & thinking about how people learn\nInterests & Hobbies: Discovering new places & their ways of living, dabbling random sports & art.\nKey Skills: UI/UX design, Systems thinking, Organising teams\n \"What counts in life is not the mere fact that we have lived. It is what difference we have made to the lives of others that will determine the significance of the life we lead\"  - Nelson Mandela",
    "photo": "assets/team/maggie.jpg",
    "projects": [
     {
@@ -291,6 +323,12 @@
      "name": "Paperboy \u00b7 2026",
      "url": "dabblers.html#paperboy",
      "img": "assets/paperboy/main.jpg"
+    },
+    {
+     "slug": "Tunyumye By The Fire",
+     "name": "Tunyumye By The Fire \u00b7 2026",
+     "url": "stories.html#Tunyumye%20By%20The%20Fire",
+     "img": "assets/Tunyumye%20By%20The%20Fire/main.jpg"
     }
    ]
   },
