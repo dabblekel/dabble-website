@@ -535,8 +535,8 @@ let lastPT='mouse', cardTapGuard=0;
 addEventListener('pointermove',e=>{ mx=e.clientX; my=e.clientY; lastPT=e.pointerType },{passive:true});
 addEventListener('pointerleave',()=>{ mx=my=-1; clearHot() });
 
-/* the dog-ear keeps a small exclusive patch; everywhere else, every picture reacts */
-const cornerCore=(x,y)=>((innerWidth-x)+(innerHeight-y))<170;
+/* the info mark keeps a small exclusive patch in its corner (now top-right); everywhere else, every picture reacts */
+const cornerCore=(x,y)=>((innerWidth-x)+y)<170;
 
 function hitAt(x,y){
   let best=null, bz=-1e9;
@@ -719,7 +719,7 @@ function leaveTo(url){
 }
 
 const onPaper=(x,y)=>((innerWidth-x)+(innerHeight-y)) < d;
-const nearCorner=(x,y)=>((innerWidth-x)+(innerHeight-y))<340;   // a generous corner target (mouse)
+const nearCorner=(x,y)=>((innerWidth-x)+y)<340;   // a generous corner target (mouse), at the mark (top-right)
 function onDog(x,y){ const r=dog.getBoundingClientRect(), pad=12;
   return x>=r.left-pad && x<=r.right+pad && y>=r.top-pad && y<=r.bottom+pad; }  // just the info mark (touch)
 
