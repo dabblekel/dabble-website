@@ -1,5 +1,5 @@
 ---
-order: 99            # optional - position on the page (lower = earlier). Leave it high or remove it to land at the end.
+order: 99
 title: What if we are tenders all along?
 subtitle: Tending the Us · 2026   
 story: yes
