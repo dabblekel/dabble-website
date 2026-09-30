@@ -121,8 +121,8 @@
   .menuglow{position:fixed;top:0;right:0;z-index:939;pointer-events:none;
       width:clamp(150px,15vw,260px);height:clamp(95px,14vh,160px);
       background:radial-gradient(120% 120% at 100% 0%,
-          rgba(245,110,30,1) 0%,rgba(245,110,30,1) 22%,rgba(242,102,26,0.92) 34%,
-          rgba(238,94,22,0.55) 50%,rgba(232,88,20,0.20) 68%,rgba(228,88,26,0) 84%)}
+          rgba(198,84,30,1) 0%,rgba(198,84,30,1) 22%,rgba(192,80,28,0.92) 34%,
+          rgba(184,76,26,0.55) 50%,rgba(176,72,24,0.20) 68%,rgba(172,72,26,0) 84%)}
 
   /* ---- a picture you can open ---- */
   .ph{cursor:pointer}
@@ -907,7 +907,7 @@ HERO.frame.push(()=>{
 
   if((d>6)!==foldOn){ foldOn=d>6; fold.style.opacity=foldOn?1:0 }
   dog.style.opacity = clamp(1-q*8,0,1);
-  menuglow.style.opacity = clamp(1-q*8,0,1);
+  menuglow.style.opacity = clamp(1-q*8,0,1)*0.6;
   back.classList.toggle('on', open && q>0.8);
 
   /* menu items ease in one after another, continuously */
