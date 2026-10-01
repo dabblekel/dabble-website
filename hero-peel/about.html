@@ -97,16 +97,14 @@
   }
   /* scroll cue: a quiet nudge that there is more below the first screen. It fades in once
      the page has settled and retires for good on the first scroll. */
-  .scroll-cue{position:fixed;left:50%;bottom:clamp(18px,3vh,30px);transform:translateX(-50%);
-      z-index:6;display:flex;flex-direction:column;align-items:center;gap:6px;
-      font-family:'Roboto Mono','SFMono-Regular',Menlo,monospace;
-      font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint);
+  .scroll-cue{position:fixed;left:50%;bottom:clamp(16px,3vh,28px);transform:translateX(-50%);
+      z-index:6;width:clamp(30px,3.2vw,42px);color:#3a3a3a;line-height:0;
       pointer-events:none;opacity:0;transition:opacity .8s ease}
-  .scroll-cue.on{opacity:1}
-  .scroll-cue .sarr{font-size:13px;letter-spacing:0;line-height:1;
-      animation:cueBob 1.8s ease-in-out infinite}
-  @keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-  @media(prefers-reduced-motion:reduce){.scroll-cue .sarr{animation:none}}
+  .scroll-cue.on{opacity:.85}
+  .scroll-cue svg{display:block;width:100%;height:auto;overflow:visible;
+      animation:cueBob 2s ease-in-out infinite}
+  @keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  @media(prefers-reduced-motion:reduce){.scroll-cue svg{animation:none}}
   
   /* ---- the corner lift, on a sub-page ----
      Same fold, same sunrise, same nav as the hero: the CSS below and the sky maths in the
@@ -227,7 +225,7 @@
   </section>
 </main>
 </div>
-<div class="scroll-cue" id="scrollCue" aria-hidden="true"><span class="lbl">Scroll</span><span class="sarr">&#8595;</span></div>
+<div class="scroll-cue" id="scrollCue" aria-hidden="true"><svg viewBox="0 0 40 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4v38"/><path d="M6 28l14 14 14-14"/></svg></div>
 
   <div class="dawn" id="dawn"></div>
   <div class="glow" id="glow"></div>
