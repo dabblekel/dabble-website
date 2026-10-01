@@ -118,7 +118,7 @@ def collect_images(src_dir, asset_dir, url_dir, slug, rel_label, warn, written, 
         written.add(os.path.abspath(dest))
         cap, side = "", os.path.join(src_dir, stem + ".txt")
         if os.path.isfile(side):
-            cap = " ".join(open(side, encoding="utf-8").read().split())
+            cap = " ".join(read_text(side).split())
         if not cap and warn_missing:
             warn.append("%s: %s/%s has no caption yet (write one into %s/%s.txt)"
                         % (slug, rel_label, f, rel_label, stem))
@@ -167,10 +167,32 @@ def load(path, cap, q):
     if b == "sips":   return _load_sips(path, cap, q)
     die("no image backend. Install Pillow with:  python3 -m pip install --user Pillow")
 
+# ---- text the team edits by hand -------------------------------------------------------
+# Spreadsheet apps on a Mac (Excel, Numbers) sometimes save text in the old "Mac Roman"
+# encoding instead of UTF-8, and pasting into an existing file can leave a mix of both.
+# Python then refuses the whole file. Rather than failing the build over a curly
+# apostrophe, read UTF-8 where it is valid and translate only the stray bytes as Mac Roman,
+# and say which file it happened in so it can be re-saved as UTF-8.
+ENC_FIXED = []
+def _macroman_fallback(err):
+    bad = err.object[err.start:err.end]
+    return bad.decode("mac_roman"), err.end
+import codecs
+codecs.register_error("macroman_fallback", _macroman_fallback)
+
+def read_text(path):
+    raw = open(path, "rb").read()
+    if raw.startswith(b"\xef\xbb\xbf"): raw = raw[3:]          # Excel's UTF-8 marker
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        ENC_FIXED.append(os.path.relpath(path, os.path.dirname(HERE)))
+        return raw.decode("utf-8", errors="macroman_fallback")
+
 def parse_entry(path):
     """Front matter (a fixed, small schema - parsed by hand so there is no PyYAML
        dependency) followed by :: ABOVE :: and :: BELOW :: copy sections."""
-    raw = open(path, encoding="utf-8").read()
+    raw = read_text(path)
     m = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", raw, re.S)
     if not m: die(path + ": missing the --- front matter block at the top")
     head, body = m.group(1), m.group(2)
@@ -216,7 +238,7 @@ def read_team(warn, written):
         warn.append("no team/team.csv - the Our Team page will be empty")
         return []
     people, seen = [], set()
-    with open(TEAM_CSV, newline="", encoding="utf-8-sig") as fh:   # -sig: Excel writes a BOM
+    with io.StringIO(read_text(TEAM_CSV), newline="") as fh:   # read_text: BOM + Mac encodings
         for i, row in enumerate(csv.DictReader(fh), start=2):
             row = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
             name = row.get("name", "")
@@ -419,7 +441,7 @@ def main():
             # empty element - there is no placeholder copy anywhere on this site.
             intro = ""
             if os.path.isfile(TEAM_INTRO):
-                intro = open(TEAM_INTRO, encoding="utf-8").read().strip()
+                intro = read_text(TEAM_INTRO).strip()
             if intro:
                 esc = lambda t: (t.replace("&", "&amp;").replace("<", "&lt;")
                                   .replace(">", "&gt;"))
@@ -589,6 +611,8 @@ def main():
              os.path.getsize(tp) // 1024 if os.path.isfile(tp) else 0))
     print("  dabble-hero-peel.html  %d KB   |   assets/  %.1f MB   (via %s)"
           % (round(kb), assets_mb, b))
+    for f_ in ENC_FIXED:
+        warn.append("%s was not saved as UTF-8 - built anyway; re-save it as 'CSV UTF-8' / UTF-8 text" % f_)
     for w_ in warn: print("  note: " + w_)
     if kb > 400:
         print("  WARNING: the page itself is %d KB. It should be well under 100 KB - "

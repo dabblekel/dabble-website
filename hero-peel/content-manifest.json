@@ -191,6 +191,19 @@
    ],
    "supporting": 2,
    "carousel": 0
+  },
+  {
+   "id": 14,
+   "slug": "masked roots",
+   "title": "What if we could make education shine brighter without losing the roots that hold it together?",
+   "subtitle": "Masked Roots \u00b7 2026   # the short line above the title, and the name this entry is credited under",
+   "story": true,
+   "dabbler": false,
+   "credits": [
+    "Maggie Namaganda"
+   ],
+   "supporting": 4,
+   "carousel": 0
   }
  ],
  "team": [
@@ -315,7 +328,7 @@
   {
    "name": "Maggie Namaganda",
    "role": "",
-   "bio": "Loves: Stories, loud laughter, good food, & thinking about how people learn\nInterests & Hobbies: Discovering new places & their ways of living, dabbling random sports & art.\nKey Skills: UI/UX design, Systems thinking, Organising teams\n \"What counts in life is not the mere fact that we have lived. It is what difference we have made to the lives of others that will determine the significance of the life we lead\"  - Nelson Mandela",
+   "bio": "Loves stories, loud laughter, thinking about how people learn, and traveling to random places, mostly in search of how people live and what they eat.\n\nPassionate about education, intrigued by the idea of preservation as a form of innovation. Perhaps innovation is not always about creating what\u2019s next, but preserving what should never be lost.\n\nA dabbler in technology, physical making, systems thinking, design strategy, user experience design, and organizing workflows. I comfortably pull off what is needed most when it is. \n\nLoves random sports and art for the fun of it.~ Dare me with an invitation:)\n\nFavorite quote: \u201cChange is the end result of all true learning.\u201d ~ Leo Buscaglia",
    "photo": "assets/team/maggie.jpg",
    "projects": [
     {
@@ -329,6 +342,12 @@
      "name": "Tunyumye By The Fire \u00b7 2026",
      "url": "stories.html#Tunyumye%20By%20The%20Fire",
      "img": "assets/Tunyumye%20By%20The%20Fire/main.jpg"
+    },
+    {
+     "slug": "masked roots",
+     "name": "Masked Roots \u00b7 2026   # the short line above the title, and the name this entry is credited under",
+     "url": "stories.html#masked%20roots",
+     "img": "assets/masked%20roots/main.jpg"
     }
    ]
   },
