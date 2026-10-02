@@ -241,11 +241,10 @@
     .tbtn:hover::after{transform:scaleX(1)}
   }
   .tbtn:focus-visible::after{transform:scaleX(1)}
-  /* touch has no hover: instead a cursor blinks after "what if", the same bar the composer
-     shows, so the headline reads as a place to write before anyone presses it */
-  .tCaret{display:none;width:max(3px,.07em);height:.82em;margin:0 .07em 0 .1em;
+  /* a cursor blinks after "what if", the same bar the composer shows, so the headline
+     reads as a place to write before anyone presses it (desktop and touch alike) */
+  .tCaret{display:inline-block;width:max(3px,.07em);height:.82em;margin:0 .07em 0 .1em;
       background:#fff;vertical-align:-.04em;animation:wfBlink 1.05s steps(1,end) infinite}
-  @media(hover:none){ .tCaret{display:inline-block} }
   .tbtn.gone{opacity:0;transform:scale(.96);pointer-events:none}
 
   .wfShade{position:fixed;inset:0;z-index:930;background:rgba(5,5,8,.6);opacity:0;pointer-events:none;
