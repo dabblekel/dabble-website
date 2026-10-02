@@ -1,7 +1,7 @@
 ---
 order: 99            # optional - position on the page (lower = earlier). Leave it high or remove it to land at the end.
 title: What if we could make education shine brighter without losing the roots that hold it together?
-subtitle: Masked Roots · 2026   # the short line above the title, and the name this entry is credited under
+subtitle: Masked Roots · 2026  
 story: yes
 dabbler: no
 credits:
