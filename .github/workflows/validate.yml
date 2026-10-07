@@ -11,6 +11,9 @@ on:
       - "content/**"
       - "team/**"
       - "hero-peel/**"
+      - "sunny-concept1/**"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/validate.yml"
   workflow_dispatch:   # lets you run it by hand from the Actions tab
 
 jobs:

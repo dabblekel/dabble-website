@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eeeae3">
+  <title>Sunny Ears · Gold cuff in 3D</title>
+  <meta name="description" content="Explore the Sunny Ears gold cuff concept in 3D. Drag to rotate and zoom in on the device and its floating display.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23eeeae3'/%3E%3Cpath d='M23 9a10 10 0 1 0 0 14' fill='none' stroke='%23927640' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+  <main id="viewer" aria-label="Interactive Sunny Ears product viewer">
+    <div id="canvas-host"></div>
+    <header class="masthead"><a class="wordmark" href="./" aria-label="Sunny Ears home">SUNNY EARS<span class="sunmark" aria-hidden="true">✳</span></a><span class="edition">CONCEPT 01</span></header>
+    <div class="title-block"><h1>Gold cuff</h1><p class="dimension">26 × 22 × 7 mm</p></div>
+    <div class="loading" id="loading" role="status"><span class="loading-ring" aria-hidden="true"></span><span id="loading-text">Preparing your view…</span></div>
+    <div class="error" id="error" hidden><p>We couldn’t open the 3D view.</p><a href="./assets/product-still.png">View the product image</a><button type="button" id="retry">Try again</button></div>
+    <footer class="viewer-footer">
+      <p class="gesture-hint" id="gesture-hint">Drag to rotate<span aria-hidden="true"> · </span>Scroll to zoom</p>
+      <div class="view-controls" aria-label="View controls">
+        <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+        <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+        <span class="control-divider" aria-hidden="true"></span>
+        <button type="button" id="reset-view">Reset view</button>
+      </div>
+    </footer>
+    <p class="sr-only" id="keyboard-help">Use arrow keys to rotate, plus and minus to zoom, and Home to reset the view.</p>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -44,6 +44,7 @@ jobs:
           cp hero-peel/*.html _site/
           cp hero-peel/content-manifest.json _site/ 2>/dev/null || true
           cp -r hero-peel/assets _site/assets
+          cp -r sunny-concept1 _site/sunny-concept1
 
       - name: Package for GitHub Pages
         uses: actions/upload-pages-artifact@v3
